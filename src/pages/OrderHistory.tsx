@@ -6,8 +6,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Receipt, Calendar, TrendingUp } from "lucide-react";
-import { format } from "date-fns";
+import { Receipt, Calendar, TrendingUp, Edit, Trash2, Archive } from "lucide-react";
+import { format, subHours } from "date-fns";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
@@ -34,11 +45,14 @@ interface DailyReport {
 
 const OrderHistory = () => {
   const navigate = useNavigate();
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
+  const [archivedOrders, setArchivedOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [showReport, setShowReport] = useState(false);
   const [dailyReport, setDailyReport] = useState<DailyReport | null>(null);
   const [generatingReport, setGeneratingReport] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [orderToDelete, setOrderToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     fetchOrders();
@@ -46,18 +60,69 @@ const OrderHistory = () => {
 
   const fetchOrders = async () => {
     try {
-      const { data, error } = await supabase
+      const twentyFourHoursAgo = subHours(new Date(), 24);
+      
+      const { data: allOrders, error } = await supabase
         .from("orders")
         .select("*")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setOrders(data || []);
+
+      const recent: Order[] = [];
+      const archived: Order[] = [];
+
+      allOrders?.forEach((order) => {
+        const orderDate = new Date(order.created_at);
+        if (orderDate >= twentyFourHoursAgo) {
+          recent.push(order);
+        } else {
+          archived.push(order);
+        }
+      });
+
+      setRecentOrders(recent);
+      setArchivedOrders(archived);
     } catch (error: any) {
       toast.error("Failed to load orders");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDeleteOrder = async () => {
+    if (!orderToDelete) return;
+
+    try {
+      // First delete order items
+      const { error: itemsError } = await supabase
+        .from("order_items")
+        .delete()
+        .eq("order_id", orderToDelete);
+
+      if (itemsError) throw itemsError;
+
+      // Then delete the order
+      const { error: orderError } = await supabase
+        .from("orders")
+        .delete()
+        .eq("id", orderToDelete);
+
+      if (orderError) throw orderError;
+
+      toast.success("Order deleted successfully");
+      fetchOrders();
+    } catch (error: any) {
+      toast.error("Failed to delete order");
+    } finally {
+      setDeleteDialogOpen(false);
+      setOrderToDelete(null);
+    }
+  };
+
+  const confirmDelete = (orderId: string) => {
+    setOrderToDelete(orderId);
+    setDeleteDialogOpen(true);
   };
 
   const handleEndDay = async () => {
@@ -126,13 +191,67 @@ const OrderHistory = () => {
     }
   };
 
+  const renderOrderCard = (order: Order) => (
+    <Card key={order.id} className="hover:shadow-md transition-shadow">
+      <CardHeader>
+        <div className="flex items-start justify-between">
+          <div className="space-y-1 flex-1">
+            <CardTitle className="text-xl flex items-center gap-2">
+              Order #{order.order_number}
+              <Badge variant="outline" className="font-normal">
+                {order.payment_method}
+              </Badge>
+            </CardTitle>
+            <CardDescription className="flex items-center gap-2">
+              <Calendar className="h-3 w-3" />
+              {format(new Date(order.created_at), "PPp")}
+            </CardDescription>
+            {order.notes && (
+              <CardDescription className="text-sm mt-2">
+                Note: {order.notes}
+              </CardDescription>
+            )}
+          </div>
+          <div className="text-right space-y-2">
+            <p className="text-2xl font-bold text-primary">
+              ${order.total.toFixed(2)}
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate(`/receipt/${order.id}`)}
+              >
+                <Receipt className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate(`/receipt/${order.id}?edit=true`)}
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => confirmDelete(order.id)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </CardHeader>
+    </Card>
+  );
+
   return (
     <Layout>
       <div className="max-w-5xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-3xl font-bold">Order History</h2>
-            <p className="text-muted-foreground">View and reprint past orders</p>
+            <p className="text-muted-foreground">Manage and track all orders</p>
           </div>
           <Button
             onClick={handleEndDay}
@@ -147,7 +266,7 @@ const OrderHistory = () => {
 
         {loading && <p className="text-center text-muted-foreground">Loading orders...</p>}
 
-        {!loading && orders.length === 0 && (
+        {!loading && recentOrders.length === 0 && archivedOrders.length === 0 && (
           <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground mb-4">No orders yet</p>
@@ -156,56 +275,70 @@ const OrderHistory = () => {
           </Card>
         )}
 
-        {!loading && orders.length > 0 && (
-          <div className="space-y-4">
-            {orders.map((order) => (
-              <Card
-                key={order.id}
-                className="hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() => navigate(`/receipt/${order.id}`)}
-              >
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <CardTitle className="text-xl flex items-center gap-2">
-                        Order #{order.order_number}
-                        <Badge variant="outline" className="font-normal">
-                          {order.payment_method}
-                        </Badge>
-                      </CardTitle>
-                      <CardDescription className="flex items-center gap-2">
-                        <Calendar className="h-3 w-3" />
-                        {format(new Date(order.created_at), "PPp")}
-                      </CardDescription>
-                      {order.notes && (
-                        <CardDescription className="text-sm mt-2">
-                          Note: {order.notes}
-                        </CardDescription>
-                      )}
-                    </div>
-                    <div className="text-right space-y-2">
-                      <p className="text-2xl font-bold text-primary">
-                        ${order.total.toFixed(2)}
-                      </p>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/receipt/${order.id}`);
-                        }}
-                      >
-                        <Receipt className="h-4 w-4 mr-1" />
-                        View Receipt
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-              </Card>
-            ))}
-          </div>
+        {!loading && (recentOrders.length > 0 || archivedOrders.length > 0) && (
+          <Tabs defaultValue="recent" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="recent" className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Recent (24h)
+                <Badge variant="secondary" className="ml-1">
+                  {recentOrders.length}
+                </Badge>
+              </TabsTrigger>
+              <TabsTrigger value="archived" className="flex items-center gap-2">
+                <Archive className="h-4 w-4" />
+                Archives
+                <Badge variant="secondary" className="ml-1">
+                  {archivedOrders.length}
+                </Badge>
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="recent" className="space-y-4">
+              {recentOrders.length === 0 ? (
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <p className="text-muted-foreground">No recent orders</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-4">
+                  {recentOrders.map(renderOrderCard)}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="archived" className="space-y-4">
+              {archivedOrders.length === 0 ? (
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <p className="text-muted-foreground">No archived orders</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-4">
+                  {archivedOrders.map(renderOrderCard)}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         )}
       </div>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Order</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this order? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteOrder}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={showReport} onOpenChange={setShowReport}>
         <DialogContent className="max-w-2xl">

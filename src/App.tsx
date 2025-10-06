@@ -10,6 +10,7 @@ import MenuManagement from "./pages/MenuManagement";
 import CreateOrder from "./pages/CreateOrder";
 import OrderHistory from "./pages/OrderHistory";
 import Receipt from "./pages/Receipt";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -77,6 +78,14 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <Receipt />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute>
+                <Admin />
               </ProtectedRoute>
             }
           />

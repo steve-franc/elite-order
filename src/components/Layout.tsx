@@ -2,9 +2,10 @@ import { ReactNode } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogOut, UtensilsCrossed, ShoppingCart, Menu, History } from "lucide-react";
+import { LogOut, UtensilsCrossed, ShoppingCart, Menu, History, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useUserRole } from "@/hooks/useUserRole";
 
 interface LayoutProps {
   children: ReactNode;
@@ -13,6 +14,7 @@ interface LayoutProps {
 const Layout = ({ children }: LayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAdmin } = useUserRole();
 
   const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut();
@@ -28,6 +30,7 @@ const Layout = ({ children }: LayoutProps) => {
     if (location.pathname === "/order/create") return "create-order";
     if (location.pathname === "/menu") return "menu";
     if (location.pathname === "/orders") return "orders";
+    if (location.pathname === "/admin") return "admin";
     return "dashboard";
   };
 
@@ -35,6 +38,7 @@ const Layout = ({ children }: LayoutProps) => {
     if (value === "create-order") navigate("/order/create");
     else if (value === "menu") navigate("/menu");
     else if (value === "orders") navigate("/orders");
+    else if (value === "admin") navigate("/admin");
     else navigate("/");
   };
 
@@ -59,7 +63,7 @@ const Layout = ({ children }: LayoutProps) => {
         {showNavigation && (
           <div className="container mx-auto px-4 pb-4">
             <Tabs value={getCurrentTab()} onValueChange={handleTabChange}>
-              <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-3">
+              <TabsList className={`grid w-full max-w-2xl mx-auto ${isAdmin ? 'grid-cols-4' : 'grid-cols-3'}`}>
                 <TabsTrigger value="create-order" className="flex items-center gap-2">
                   <ShoppingCart className="h-4 w-4" />
                   <span className="hidden sm:inline">Create Order</span>
@@ -72,6 +76,12 @@ const Layout = ({ children }: LayoutProps) => {
                   <History className="h-4 w-4" />
                   <span className="hidden sm:inline">Orders</span>
                 </TabsTrigger>
+                {isAdmin && (
+                  <TabsTrigger value="admin" className="flex items-center gap-2">
+                    <Shield className="h-4 w-4" />
+                    <span className="hidden sm:inline">Admin</span>
+                  </TabsTrigger>
+                )}
               </TabsList>
             </Tabs>
           </div>
