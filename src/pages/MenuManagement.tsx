@@ -17,6 +17,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface MenuItem {
   id: string;
@@ -25,6 +32,7 @@ interface MenuItem {
   price: number;
   description: string | null;
   is_available: boolean;
+  pricing_unit: string;
 }
 
 const MenuManagement = () => {
@@ -37,6 +45,7 @@ const MenuManagement = () => {
     category: "",
     price: "",
     description: "",
+    pricing_unit: "per piece",
   });
 
   useEffect(() => {
@@ -73,6 +82,7 @@ const MenuManagement = () => {
         category: formData.category || null,
         price: parseFloat(formData.price),
         description: formData.description || null,
+        pricing_unit: formData.pricing_unit,
       };
 
       if (editingItem) {
@@ -121,12 +131,13 @@ const MenuManagement = () => {
       category: item.category || "",
       price: item.price.toString(),
       description: item.description || "",
+      pricing_unit: item.pricing_unit || "per piece",
     });
     setDialogOpen(true);
   };
 
   const resetForm = () => {
-    setFormData({ name: "", category: "", price: "", description: "" });
+    setFormData({ name: "", category: "", price: "", description: "", pricing_unit: "per piece" });
     setEditingItem(null);
   };
 
@@ -197,6 +208,23 @@ const MenuManagement = () => {
                   />
                 </div>
                 <div className="space-y-2">
+                  <Label htmlFor="pricing_unit">Pricing Unit *</Label>
+                  <Select
+                    value={formData.pricing_unit}
+                    onValueChange={(value) => setFormData({ ...formData, pricing_unit: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select unit" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="per piece">Per Piece</SelectItem>
+                      <SelectItem value="per scoop">Per Scoop</SelectItem>
+                      <SelectItem value="per serving">Per Serving</SelectItem>
+                      <SelectItem value="per bowl">Per Bowl</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="description">Description</Label>
                   <Textarea
                     id="description"
@@ -253,7 +281,7 @@ const MenuManagement = () => {
                             <CardTitle className="text-lg">{item.name}</CardTitle>
                             <div className="flex items-center gap-2 mt-1">
                               <Badge variant="secondary" className="font-bold">
-                                ${item.price.toFixed(2)}
+                                ${item.price.toFixed(2)} {item.pricing_unit}
                               </Badge>
                               {item.is_available && (
                                 <Badge variant="outline" className="text-xs">

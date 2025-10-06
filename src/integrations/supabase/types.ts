@@ -53,6 +53,7 @@ export type Database = {
           is_available: boolean
           name: string
           price: number
+          pricing_unit: string | null
           staff_id: string
           updated_at: string
         }
@@ -64,6 +65,7 @@ export type Database = {
           is_available?: boolean
           name: string
           price: number
+          pricing_unit?: string | null
           staff_id: string
           updated_at?: string
         }
@@ -75,6 +77,7 @@ export type Database = {
           is_available?: boolean
           name?: string
           price?: number
+          pricing_unit?: string | null
           staff_id?: string
           updated_at?: string
         }

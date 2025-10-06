@@ -19,6 +19,7 @@ interface MenuItem {
   category: string | null;
   price: number;
   description: string | null;
+  pricing_unit: string;
 }
 
 interface OrderItem {
@@ -165,7 +166,7 @@ const CreateOrder = () => {
                       <CardHeader className="pb-3">
                         <div className="flex items-start justify-between">
                           <CardTitle className="text-base">{item.name}</CardTitle>
-                          <Badge variant="secondary">${item.price.toFixed(2)}</Badge>
+                          <Badge variant="secondary">${item.price.toFixed(2)} {item.pricing_unit}</Badge>
                         </div>
                         {item.description && (
                           <CardDescription className="text-sm">{item.description}</CardDescription>
@@ -207,7 +208,7 @@ const CreateOrder = () => {
                         <div className="flex-1">
                           <p className="font-medium text-sm">{item.menuItem.name}</p>
                           <p className="text-xs text-muted-foreground">
-                            ${item.menuItem.price.toFixed(2)} each
+                            ${item.menuItem.price.toFixed(2)} {item.menuItem.pricing_unit}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
