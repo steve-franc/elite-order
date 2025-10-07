@@ -6,8 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Receipt, Calendar, TrendingUp, Edit, Trash2, Archive } from "lucide-react";
-import { format, subHours } from "date-fns";
+import { Receipt, Calendar, TrendingUp, Edit, Trash2, Archive, Printer } from "lucide-react";
+import { format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
@@ -37,10 +37,23 @@ interface Order {
   created_at: string;
 }
 
+interface OrderItem {
+  id: string;
+  menu_item_name: string;
+  quantity: number;
+  price_at_time: number;
+  subtotal: number;
+}
+
+interface OrderWithItems extends Order {
+  items: OrderItem[];
+}
+
 interface DailyReport {
   total_orders: number;
   total_revenue: number;
   payment_methods: Record<string, { count: number; total: number }>;
+  orders: OrderWithItems[];
 }
 
 const OrderHistory = () => {
@@ -53,6 +66,7 @@ const OrderHistory = () => {
   const [generatingReport, setGeneratingReport] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<string | null>(null);
+  const [lastEndDayDate, setLastEndDayDate] = useState<string | null>(null);
 
   useEffect(() => {
     fetchOrders();
@@ -60,7 +74,30 @@ const OrderHistory = () => {
 
   const fetchOrders = async () => {
     try {
-      const twentyFourHoursAgo = subHours(new Date(), 24);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Get the most recent daily report to find last end day
+      const { data: lastReport } = await supabase
+        .from("daily_reports")
+        .select("report_date")
+        .eq("staff_id", user.id)
+        .order("report_date", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      let cutoffDate: Date;
+      if (lastReport) {
+        // Use the day after the last report as cutoff (start of next day)
+        cutoffDate = new Date(lastReport.report_date);
+        cutoffDate.setDate(cutoffDate.getDate() + 1);
+        cutoffDate.setHours(0, 0, 0, 0);
+        setLastEndDayDate(lastReport.report_date);
+      } else {
+        // If no reports exist, show all orders as recent
+        cutoffDate = new Date(0); // Beginning of time
+        setLastEndDayDate(null);
+      }
       
       const { data: allOrders, error } = await supabase
         .from("orders")
@@ -74,7 +111,7 @@ const OrderHistory = () => {
 
       allOrders?.forEach((order) => {
         const orderDate = new Date(order.created_at);
-        if (orderDate >= twentyFourHoursAgo) {
+        if (orderDate >= cutoffDate) {
           recent.push(order);
         } else {
           archived.push(order);
@@ -131,30 +168,61 @@ const OrderHistory = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Get today's date
+      // Get the most recent daily report to find last end day
+      const { data: lastReport } = await supabase
+        .from("daily_reports")
+        .select("report_date")
+        .eq("staff_id", user.id)
+        .order("report_date", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      let cutoffDate: Date;
+      if (lastReport) {
+        cutoffDate = new Date(lastReport.report_date);
+        cutoffDate.setDate(cutoffDate.getDate() + 1);
+        cutoffDate.setHours(0, 0, 0, 0);
+      } else {
+        cutoffDate = new Date(0);
+      }
+
       const today = format(new Date(), "yyyy-MM-dd");
 
-      // Fetch today's orders
-      const { data: todayOrders, error: ordersError } = await supabase
+      // Fetch all orders since last end day
+      const { data: ordersData, error: ordersError } = await supabase
         .from("orders")
         .select("*")
-        .gte("created_at", `${today}T00:00:00`)
-        .lte("created_at", `${today}T23:59:59`)
-        .eq("staff_id", user.id);
+        .gte("created_at", cutoffDate.toISOString())
+        .order("created_at", { ascending: false });
 
       if (ordersError) throw ordersError;
 
-      if (!todayOrders || todayOrders.length === 0) {
-        toast.error("No orders found for today");
+      if (!ordersData || ordersData.length === 0) {
+        toast.error("No orders found since last end day");
         setGeneratingReport(false);
         return;
       }
 
+      // Fetch all order items for these orders
+      const orderIds = ordersData.map(o => o.id);
+      const { data: itemsData, error: itemsError } = await supabase
+        .from("order_items")
+        .select("*")
+        .in("order_id", orderIds);
+
+      if (itemsError) throw itemsError;
+
+      // Combine orders with their items
+      const ordersWithItems: OrderWithItems[] = ordersData.map(order => ({
+        ...order,
+        items: itemsData?.filter(item => item.order_id === order.id) || []
+      }));
+
       // Calculate totals
-      const totalRevenue = todayOrders.reduce((sum, order) => sum + Number(order.total), 0);
+      const totalRevenue = ordersData.reduce((sum, order) => sum + Number(order.total), 0);
       const paymentMethods: Record<string, { count: number; total: number }> = {};
 
-      todayOrders.forEach((order) => {
+      ordersData.forEach((order) => {
         if (!paymentMethods[order.payment_method]) {
           paymentMethods[order.payment_method] = { count: 0, total: 0 };
         }
@@ -168,7 +236,7 @@ const OrderHistory = () => {
         .upsert({
           staff_id: user.id,
           report_date: today,
-          total_orders: todayOrders.length,
+          total_orders: ordersData.length,
           total_revenue: totalRevenue,
           payment_methods: paymentMethods,
         });
@@ -177,13 +245,15 @@ const OrderHistory = () => {
 
       // Set report data and show dialog
       setDailyReport({
-        total_orders: todayOrders.length,
+        total_orders: ordersData.length,
         total_revenue: totalRevenue,
         payment_methods: paymentMethods,
+        orders: ordersWithItems,
       });
       setShowReport(true);
 
       toast.success("Daily report generated successfully");
+      fetchOrders(); // Refresh orders to update the cutoff
     } catch (error: any) {
       toast.error(error.message || "Failed to generate report");
     } finally {
@@ -280,7 +350,7 @@ const OrderHistory = () => {
             <TabsList>
               <TabsTrigger value="recent" className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
-                Recent (24h)
+                {lastEndDayDate ? `Since ${format(new Date(lastEndDayDate), "PP")}` : "All Orders"}
                 <Badge variant="secondary" className="ml-1">
                   {recentOrders.length}
                 </Badge>
@@ -341,8 +411,8 @@ const OrderHistory = () => {
       </AlertDialog>
 
       <Dialog open={showReport} onOpenChange={setShowReport}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="print:hidden">
             <DialogTitle className="text-2xl">Daily Report</DialogTitle>
             <DialogDescription>
               Summary for {format(new Date(), "PPP")}
@@ -351,8 +421,15 @@ const OrderHistory = () => {
 
           {dailyReport && (
             <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <Card>
+              <div className="print:text-center print:mb-6">
+                <h1 className="text-2xl font-bold hidden print:block">Daily Report</h1>
+                <p className="text-muted-foreground hidden print:block">
+                  {format(new Date(), "PPP")}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 print:mb-6">
+                <Card className="print:shadow-none print:border-2">
                   <CardHeader className="pb-3">
                     <CardDescription>Total Orders</CardDescription>
                     <CardTitle className="text-3xl text-primary">
@@ -361,7 +438,7 @@ const OrderHistory = () => {
                   </CardHeader>
                 </Card>
 
-                <Card>
+                <Card className="print:shadow-none print:border-2">
                   <CardHeader className="pb-3">
                     <CardDescription>Total Revenue</CardDescription>
                     <CardTitle className="text-3xl text-primary">
@@ -373,13 +450,13 @@ const OrderHistory = () => {
 
               <Separator />
 
-              <div>
+              <div className="print:mb-6">
                 <h3 className="font-semibold mb-4">Payment Methods Breakdown</h3>
                 <div className="space-y-3">
                   {Object.entries(dailyReport.payment_methods).map(([method, data]) => (
                     <div
                       key={method}
-                      className="flex items-center justify-between p-3 bg-muted rounded-lg"
+                      className="flex items-center justify-between p-3 bg-muted rounded-lg print:border print:border-border"
                     >
                       <div>
                         <p className="font-medium">{method}</p>
@@ -395,12 +472,64 @@ const OrderHistory = () => {
                 </div>
               </div>
 
-              <div className="flex gap-2">
+              <Separator />
+
+              <div className="print:break-before-page">
+                <h3 className="font-semibold mb-4 text-lg">All Receipts</h3>
+                <div className="space-y-6">
+                  {dailyReport.orders.map((order, index) => (
+                    <div key={order.id} className="print:break-inside-avoid">
+                      <Card className="print:shadow-none print:border-2 print:mb-4">
+                        <CardHeader className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-lg">Order #{order.order_number}</CardTitle>
+                            <Badge variant="outline">{order.payment_method}</Badge>
+                          </div>
+                          <CardDescription>
+                            {format(new Date(order.created_at), "PPp")}
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          <div className="space-y-2">
+                            {order.items.map((item) => (
+                              <div key={item.id} className="flex justify-between text-sm">
+                                <div className="flex-1">
+                                  <p className="font-medium">{item.menu_item_name}</p>
+                                  <p className="text-muted-foreground">
+                                    {item.quantity} × ${item.price_at_time.toFixed(2)}
+                                  </p>
+                                </div>
+                                <p className="font-medium">${item.subtotal.toFixed(2)}</p>
+                              </div>
+                            ))}
+                          </div>
+                          <Separator />
+                          <div className="flex justify-between font-bold">
+                            <span>Total</span>
+                            <span className="text-primary">${order.total.toFixed(2)}</span>
+                          </div>
+                          {order.notes && (
+                            <div className="text-sm">
+                              <p className="text-muted-foreground">Notes:</p>
+                              <p>{order.notes}</p>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                      {index < dailyReport.orders.length - 1 && (
+                        <Separator className="my-4 print:hidden" />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-2 print:hidden">
                 <Button
                   className="flex-1"
                   onClick={() => window.print()}
                 >
-                  <Receipt className="h-4 w-4 mr-2" />
+                  <Printer className="h-4 w-4 mr-2" />
                   Print Report
                 </Button>
                 <Button
