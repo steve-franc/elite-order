@@ -161,9 +161,9 @@ const MenuManagement = () => {
   return <Layout>
       <div className="max-w-6xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
-          <div>
+          <div className="py-[10px]">
             <h2 className="text-3xl font-bold">Menu Management</h2>
-            <p className="text-muted-foreground">Add and manage your menu items</p>
+            <p className="text-muted-foreground my-[10px]">Add and manage your menu items</p>
           </div>
           <Dialog open={dialogOpen} onOpenChange={open => {
           setDialogOpen(open);

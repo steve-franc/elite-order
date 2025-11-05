@@ -9,25 +9,9 @@ import { toast } from "sonner";
 import { Receipt, Calendar, TrendingUp, Edit, Trash2, Archive, Printer } from "lucide-react";
 import { format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-
 interface Order {
   id: string;
   order_number: number;
@@ -36,7 +20,6 @@ interface Order {
   notes: string | null;
   created_at: string;
 }
-
 interface OrderItem {
   id: string;
   menu_item_name: string;
@@ -44,18 +27,18 @@ interface OrderItem {
   price_at_time: number;
   subtotal: number;
 }
-
 interface OrderWithItems extends Order {
   items: OrderItem[];
 }
-
 interface DailyReport {
   total_orders: number;
   total_revenue: number;
-  payment_methods: Record<string, { count: number; total: number }>;
+  payment_methods: Record<string, {
+    count: number;
+    total: number;
+  }>;
   orders: OrderWithItems[];
 }
-
 const OrderHistory = () => {
   const navigate = useNavigate();
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
@@ -67,25 +50,24 @@ const OrderHistory = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<string | null>(null);
   const [lastEndDayDate, setLastEndDayDate] = useState<string | null>(null);
-
   useEffect(() => {
     fetchOrders();
   }, []);
-
   const fetchOrders = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: {
+          user
+        }
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       // Get the most recent daily report to find last end day
-      const { data: lastReport } = await supabase
-        .from("daily_reports")
-        .select("report_date")
-        .eq("staff_id", user.id)
-        .order("report_date", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
+      const {
+        data: lastReport
+      } = await supabase.from("daily_reports").select("report_date").eq("staff_id", user.id).order("report_date", {
+        ascending: false
+      }).limit(1).maybeSingle();
       let cutoffDate: Date;
       if (lastReport) {
         // Use the day after the last report as cutoff (start of next day)
@@ -98,18 +80,16 @@ const OrderHistory = () => {
         cutoffDate = new Date(0); // Beginning of time
         setLastEndDayDate(null);
       }
-      
-      const { data: allOrders, error } = await supabase
-        .from("orders")
-        .select("*")
-        .order("created_at", { ascending: false });
-
+      const {
+        data: allOrders,
+        error
+      } = await supabase.from("orders").select("*").order("created_at", {
+        ascending: false
+      });
       if (error) throw error;
-
       const recent: Order[] = [];
       const archived: Order[] = [];
-
-      allOrders?.forEach((order) => {
+      allOrders?.forEach(order => {
         const orderDate = new Date(order.created_at);
         if (orderDate >= cutoffDate) {
           recent.push(order);
@@ -117,7 +97,6 @@ const OrderHistory = () => {
           archived.push(order);
         }
       });
-
       setRecentOrders(recent);
       setArchivedOrders(archived);
     } catch (error: any) {
@@ -126,27 +105,20 @@ const OrderHistory = () => {
       setLoading(false);
     }
   };
-
   const handleDeleteOrder = async () => {
     if (!orderToDelete) return;
-
     try {
       // First delete order items
-      const { error: itemsError } = await supabase
-        .from("order_items")
-        .delete()
-        .eq("order_id", orderToDelete);
-
+      const {
+        error: itemsError
+      } = await supabase.from("order_items").delete().eq("order_id", orderToDelete);
       if (itemsError) throw itemsError;
 
       // Then delete the order
-      const { error: orderError } = await supabase
-        .from("orders")
-        .delete()
-        .eq("id", orderToDelete);
-
+      const {
+        error: orderError
+      } = await supabase.from("orders").delete().eq("id", orderToDelete);
       if (orderError) throw orderError;
-
       toast.success("Order deleted successfully");
       fetchOrders();
     } catch (error: any) {
@@ -156,27 +128,26 @@ const OrderHistory = () => {
       setOrderToDelete(null);
     }
   };
-
   const confirmDelete = (orderId: string) => {
     setOrderToDelete(orderId);
     setDeleteDialogOpen(true);
   };
-
   const handleEndDay = async () => {
     setGeneratingReport(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: {
+          user
+        }
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       // Get the most recent daily report to find last end day
-      const { data: lastReport } = await supabase
-        .from("daily_reports")
-        .select("report_date")
-        .eq("staff_id", user.id)
-        .order("report_date", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
+      const {
+        data: lastReport
+      } = await supabase.from("daily_reports").select("report_date").eq("staff_id", user.id).order("report_date", {
+        ascending: false
+      }).limit(1).maybeSingle();
       let cutoffDate: Date;
       if (lastReport) {
         cutoffDate = new Date(lastReport.report_date);
@@ -185,18 +156,16 @@ const OrderHistory = () => {
       } else {
         cutoffDate = new Date(0);
       }
-
       const today = format(new Date(), "yyyy-MM-dd");
 
       // Fetch all orders since last end day
-      const { data: ordersData, error: ordersError } = await supabase
-        .from("orders")
-        .select("*")
-        .gte("created_at", cutoffDate.toISOString())
-        .order("created_at", { ascending: false });
-
+      const {
+        data: ordersData,
+        error: ordersError
+      } = await supabase.from("orders").select("*").gte("created_at", cutoffDate.toISOString()).order("created_at", {
+        ascending: false
+      });
       if (ordersError) throw ordersError;
-
       if (!ordersData || ordersData.length === 0) {
         toast.error("No orders found since last end day");
         setGeneratingReport(false);
@@ -205,11 +174,10 @@ const OrderHistory = () => {
 
       // Fetch all order items for these orders
       const orderIds = ordersData.map(o => o.id);
-      const { data: itemsData, error: itemsError } = await supabase
-        .from("order_items")
-        .select("*")
-        .in("order_id", orderIds);
-
+      const {
+        data: itemsData,
+        error: itemsError
+      } = await supabase.from("order_items").select("*").in("order_id", orderIds);
       if (itemsError) throw itemsError;
 
       // Combine orders with their items
@@ -220,27 +188,31 @@ const OrderHistory = () => {
 
       // Calculate totals
       const totalRevenue = ordersData.reduce((sum, order) => sum + Number(order.total), 0);
-      const paymentMethods: Record<string, { count: number; total: number }> = {};
-
-      ordersData.forEach((order) => {
+      const paymentMethods: Record<string, {
+        count: number;
+        total: number;
+      }> = {};
+      ordersData.forEach(order => {
         if (!paymentMethods[order.payment_method]) {
-          paymentMethods[order.payment_method] = { count: 0, total: 0 };
+          paymentMethods[order.payment_method] = {
+            count: 0,
+            total: 0
+          };
         }
         paymentMethods[order.payment_method].count++;
         paymentMethods[order.payment_method].total += Number(order.total);
       });
 
       // Save daily report
-      const { error: reportError } = await supabase
-        .from("daily_reports")
-        .upsert({
-          staff_id: user.id,
-          report_date: today,
-          total_orders: ordersData.length,
-          total_revenue: totalRevenue,
-          payment_methods: paymentMethods,
-        });
-
+      const {
+        error: reportError
+      } = await supabase.from("daily_reports").upsert({
+        staff_id: user.id,
+        report_date: today,
+        total_orders: ordersData.length,
+        total_revenue: totalRevenue,
+        payment_methods: paymentMethods
+      });
       if (reportError) throw reportError;
 
       // Set report data and show dialog
@@ -248,10 +220,9 @@ const OrderHistory = () => {
         total_orders: ordersData.length,
         total_revenue: totalRevenue,
         payment_methods: paymentMethods,
-        orders: ordersWithItems,
+        orders: ordersWithItems
       });
       setShowReport(true);
-
       toast.success("Daily report generated successfully");
       fetchOrders(); // Refresh orders to update the cutoff
     } catch (error: any) {
@@ -260,10 +231,8 @@ const OrderHistory = () => {
       setGeneratingReport(false);
     }
   };
-
-  const renderOrderCard = (order: Order) => (
-    <Card key={order.id} className="hover:shadow-md transition-shadow">
-      <CardHeader>
+  const renderOrderCard = (order: Order) => <Card key={order.id} className="hover:shadow-md transition-shadow">
+      <CardHeader className="bg-[F5F5F0] bg-[#f5f5f0]">
         <div className="flex items-start justify-between">
           <div className="space-y-1 flex-1">
             <CardTitle className="text-xl flex items-center gap-2">
@@ -276,59 +245,37 @@ const OrderHistory = () => {
               <Calendar className="h-3 w-3" />
               {format(new Date(order.created_at), "PPp")}
             </CardDescription>
-            {order.notes && (
-              <CardDescription className="text-sm mt-2">
+            {order.notes && <CardDescription className="text-sm mt-2">
                 Note: {order.notes}
-              </CardDescription>
-            )}
+              </CardDescription>}
           </div>
           <div className="text-right space-y-2">
             <p className="text-2xl font-bold text-primary">
               ${order.total.toFixed(2)}
             </p>
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate(`/receipt/${order.id}`)}
-              >
+              <Button variant="outline" size="sm" onClick={() => navigate(`/receipt/${order.id}`)}>
                 <Receipt className="h-4 w-4" />
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate(`/receipt/${order.id}?edit=true`)}
-              >
+              <Button variant="outline" size="sm" onClick={() => navigate(`/receipt/${order.id}?edit=true`)}>
                 <Edit className="h-4 w-4" />
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => confirmDelete(order.id)}
-              >
+              <Button variant="outline" size="sm" onClick={() => confirmDelete(order.id)}>
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>
           </div>
         </div>
       </CardHeader>
-    </Card>
-  );
-
-  return (
-    <Layout>
+    </Card>;
+  return <Layout>
       <div className="max-w-5xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-3xl font-bold">Order History</h2>
             <p className="text-muted-foreground">Manage and track all orders</p>
           </div>
-          <Button
-            onClick={handleEndDay}
-            disabled={generatingReport}
-            size="lg"
-            className="gap-2"
-          >
+          <Button onClick={handleEndDay} disabled={generatingReport} size="lg" className="gap-2 bg-red-900 hover:bg-red-800">
             <TrendingUp className="h-4 w-4" />
             {generatingReport ? "Generating..." : "End Day"}
           </Button>
@@ -336,17 +283,14 @@ const OrderHistory = () => {
 
         {loading && <p className="text-center text-muted-foreground">Loading orders...</p>}
 
-        {!loading && recentOrders.length === 0 && archivedOrders.length === 0 && (
-          <Card>
+        {!loading && recentOrders.length === 0 && archivedOrders.length === 0 && <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground mb-4">No orders yet</p>
               <Button onClick={() => navigate("/order/create")}>Create First Order</Button>
             </CardContent>
-          </Card>
-        )}
+          </Card>}
 
-        {!loading && (recentOrders.length > 0 || archivedOrders.length > 0) && (
-          <Tabs defaultValue="recent" className="space-y-4">
+        {!loading && (recentOrders.length > 0 || archivedOrders.length > 0) && <Tabs defaultValue="recent" className="space-y-4">
             <TabsList>
               <TabsTrigger value="recent" className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
@@ -365,34 +309,25 @@ const OrderHistory = () => {
             </TabsList>
 
             <TabsContent value="recent" className="space-y-4">
-              {recentOrders.length === 0 ? (
-                <Card>
+              {recentOrders.length === 0 ? <Card>
                   <CardContent className="py-12 text-center">
                     <p className="text-muted-foreground">No recent orders</p>
                   </CardContent>
-                </Card>
-              ) : (
-                <div className="space-y-4">
+                </Card> : <div className="space-y-4">
                   {recentOrders.map(renderOrderCard)}
-                </div>
-              )}
+                </div>}
             </TabsContent>
 
             <TabsContent value="archived" className="space-y-4">
-              {archivedOrders.length === 0 ? (
-                <Card>
+              {archivedOrders.length === 0 ? <Card>
                   <CardContent className="py-12 text-center">
                     <p className="text-muted-foreground">No archived orders</p>
                   </CardContent>
-                </Card>
-              ) : (
-                <div className="space-y-4">
+                </Card> : <div className="space-y-4">
                   {archivedOrders.map(renderOrderCard)}
-                </div>
-              )}
+                </div>}
             </TabsContent>
-          </Tabs>
-        )}
+          </Tabs>}
       </div>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -419,8 +354,7 @@ const OrderHistory = () => {
             </DialogDescription>
           </DialogHeader>
 
-          {dailyReport && (
-            <div className="space-y-6">
+          {dailyReport && <div className="space-y-6">
               <div className="print:text-center print:mb-6">
                 <h1 className="text-2xl font-bold hidden print:block">Daily Report</h1>
                 <p className="text-muted-foreground hidden print:block">
@@ -453,11 +387,7 @@ const OrderHistory = () => {
               <div className="print:mb-6">
                 <h3 className="font-semibold mb-4">Payment Methods Breakdown</h3>
                 <div className="space-y-3">
-                  {Object.entries(dailyReport.payment_methods).map(([method, data]) => (
-                    <div
-                      key={method}
-                      className="flex items-center justify-between p-3 bg-muted rounded-lg print:border print:border-border"
-                    >
+                  {Object.entries(dailyReport.payment_methods).map(([method, data]) => <div key={method} className="flex items-center justify-between p-3 bg-muted rounded-lg print:border print:border-border">
                       <div>
                         <p className="font-medium">{method}</p>
                         <p className="text-sm text-muted-foreground">
@@ -467,8 +397,7 @@ const OrderHistory = () => {
                       <p className="text-lg font-bold text-primary">
                         ${data.total.toFixed(2)}
                       </p>
-                    </div>
-                  ))}
+                    </div>)}
                 </div>
               </div>
 
@@ -477,8 +406,7 @@ const OrderHistory = () => {
               <div className="print:break-before-page">
                 <h3 className="font-semibold mb-4 text-lg">All Receipts</h3>
                 <div className="space-y-6">
-                  {dailyReport.orders.map((order, index) => (
-                    <div key={order.id} className="print:break-inside-avoid">
+                  {dailyReport.orders.map((order, index) => <div key={order.id} className="print:break-inside-avoid">
                       <Card className="print:shadow-none print:border-2 print:mb-4">
                         <CardHeader className="space-y-2">
                           <div className="flex items-center justify-between">
@@ -491,8 +419,7 @@ const OrderHistory = () => {
                         </CardHeader>
                         <CardContent className="space-y-3">
                           <div className="space-y-2">
-                            {order.items.map((item) => (
-                              <div key={item.id} className="flex justify-between text-sm">
+                            {order.items.map(item => <div key={item.id} className="flex justify-between text-sm">
                                 <div className="flex-1">
                                   <p className="font-medium">{item.menu_item_name}</p>
                                   <p className="text-muted-foreground">
@@ -500,52 +427,36 @@ const OrderHistory = () => {
                                   </p>
                                 </div>
                                 <p className="font-medium">${item.subtotal.toFixed(2)}</p>
-                              </div>
-                            ))}
+                              </div>)}
                           </div>
                           <Separator />
                           <div className="flex justify-between font-bold">
                             <span>Total</span>
                             <span className="text-primary">${order.total.toFixed(2)}</span>
                           </div>
-                          {order.notes && (
-                            <div className="text-sm">
+                          {order.notes && <div className="text-sm">
                               <p className="text-muted-foreground">Notes:</p>
                               <p>{order.notes}</p>
-                            </div>
-                          )}
+                            </div>}
                         </CardContent>
                       </Card>
-                      {index < dailyReport.orders.length - 1 && (
-                        <Separator className="my-4 print:hidden" />
-                      )}
-                    </div>
-                  ))}
+                      {index < dailyReport.orders.length - 1 && <Separator className="my-4 print:hidden" />}
+                    </div>)}
                 </div>
               </div>
 
               <div className="flex gap-2 print:hidden">
-                <Button
-                  className="flex-1"
-                  onClick={() => window.print()}
-                >
+                <Button className="flex-1" onClick={() => window.print()}>
                   <Printer className="h-4 w-4 mr-2" />
                   Print Report
                 </Button>
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => setShowReport(false)}
-                >
+                <Button variant="outline" className="flex-1" onClick={() => setShowReport(false)}>
                   Close
                 </Button>
               </div>
-            </div>
-          )}
+            </div>}
         </DialogContent>
       </Dialog>
-    </Layout>
-  );
+    </Layout>;
 };
-
 export default OrderHistory;
