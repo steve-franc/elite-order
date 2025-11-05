@@ -159,7 +159,7 @@ const Auth = () => {
                     <Label htmlFor="signup-password">Password</Label>
                     <Input id="signup-password" type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={6} />
                   </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
+                  <Button type="submit" disabled={loading} className="w-full bg-[435663] bg-[#435663]">
                     {loading ? "Creating account..." : "Sign Up"}
                   </Button>
                   <p className="text-xs text-center text-muted-foreground">
