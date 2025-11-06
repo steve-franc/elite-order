@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Shield, Users, ShoppingBag, TrendingUp, Calendar } from "lucide-react";
 import { format, subDays } from "date-fns";
+import { formatPrice } from "@/lib/currency";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
@@ -32,6 +33,7 @@ interface Order {
   payment_method: string;
   created_at: string;
   staff_id: string;
+  currency: string;
   profiles: { full_name: string };
 }
 
@@ -42,6 +44,7 @@ interface DailyReport {
   total_revenue: number;
   payment_methods: Record<string, { count: number; total: number }>;
   profiles: { full_name: string };
+  currency?: string;
 }
 
 const Admin = () => {
@@ -114,7 +117,7 @@ const Admin = () => {
 
   const fetchReports = async () => {
     const startDate = subDays(new Date(), parseInt(dateFilter));
-    const { data } = await supabase
+    const { data: reportsData } = await supabase
       .from("daily_reports")
       .select(`
         *,
@@ -123,7 +126,25 @@ const Admin = () => {
       .gte("report_date", format(startDate, "yyyy-MM-dd"))
       .order("report_date", { ascending: false });
 
-    setReports(data as any || []);
+    // Fetch the first order from each report date to get currency
+    const reportsWithCurrency = await Promise.all(
+      (reportsData || []).map(async (report) => {
+        const { data: firstOrder } = await supabase
+          .from("orders")
+          .select("currency")
+          .gte("created_at", report.report_date)
+          .lt("created_at", format(new Date(new Date(report.report_date).getTime() + 86400000), "yyyy-MM-dd"))
+          .limit(1)
+          .maybeSingle();
+        
+        return {
+          ...report,
+          currency: firstOrder?.currency || 'USD'
+        };
+      })
+    );
+
+    setReports(reportsWithCurrency as any);
   };
 
   const handleRoleChange = async (userId: string, newRole: string) => {
@@ -207,7 +228,9 @@ const Admin = () => {
                 <TrendingUp className="h-4 w-4" />
                 Total Revenue
               </CardDescription>
-              <CardTitle className="text-3xl">${totalRevenue.toFixed(2)}</CardTitle>
+              <CardTitle className="text-3xl">
+                {orders.length > 0 ? formatPrice(totalRevenue, orders[0]?.currency || 'USD') : '$0.00'}
+              </CardTitle>
             </CardHeader>
           </Card>
         </div>
@@ -289,7 +312,7 @@ const Admin = () => {
                             <Badge variant="outline">{order.payment_method}</Badge>
                           </div>
                           <p className="text-sm text-muted-foreground">
-                            Staff: {order.profiles?.full_name || "Unknown"}
+                            Staff: {order.profiles?.full_name || "Public Order"}
                           </p>
                           <p className="text-xs text-muted-foreground flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
@@ -297,7 +320,7 @@ const Admin = () => {
                           </p>
                         </div>
                         <p className="text-2xl font-bold text-primary">
-                          ${order.total.toFixed(2)}
+                          {formatPrice(order.total, order.currency)}
                         </p>
                       </div>
                     </CardContent>
@@ -339,7 +362,7 @@ const Admin = () => {
                           </CardDescription>
                         </div>
                         <Badge variant="outline" className="text-lg px-4 py-2">
-                          ${report.total_revenue.toFixed(2)}
+                          {formatPrice(report.total_revenue, report.currency || 'USD')}
                         </Badge>
                       </div>
                     </CardHeader>
@@ -349,16 +372,16 @@ const Admin = () => {
                           <p className="text-sm text-muted-foreground">Total Orders</p>
                           <p className="text-2xl font-bold">{report.total_orders}</p>
                         </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Payment Methods</p>
-                          <div className="mt-1 space-y-1">
-                            {Object.entries(report.payment_methods).map(([method, data]) => (
-                              <p key={method} className="text-sm">
-                                {method}: {data.count} (${data.total.toFixed(2)})
-                              </p>
-                            ))}
+                          <div>
+                            <p className="text-sm text-muted-foreground">Payment Methods</p>
+                            <div className="mt-1 space-y-1">
+                              {Object.entries(report.payment_methods).map(([method, data]) => (
+                                <p key={method} className="text-sm">
+                                  {method}: {data.count} ({formatPrice(data.total, report.currency || 'USD')})
+                                </p>
+                              ))}
+                            </div>
                           </div>
-                        </div>
                       </div>
                     </CardContent>
                   </Card>

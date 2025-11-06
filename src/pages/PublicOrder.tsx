@@ -75,6 +75,12 @@ const PublicOrder = () => {
   };
 
   const addToOrder = (menuItem: MenuItem) => {
+    // Validate currency matches restaurant currency
+    if (menuItem.currency !== currency) {
+      toast.error(`This item uses ${menuItem.currency} but the restaurant uses ${currency}`);
+      return;
+    }
+    
     const existing = orderItems.find((item) => item.menuItem.id === menuItem.id);
     if (existing) {
       setOrderItems(
@@ -95,17 +101,19 @@ const PublicOrder = () => {
             ? { ...item, quantity: Math.max(0, item.quantity + change) }
             : item
         )
-        .filter((item) => item.quantity > 0)
+        .filter((item) => item.quantity > 0 || item.extraUnits > 0)
     );
   };
 
   const updateExtraUnits = (menuItemId: string, change: number) => {
     setOrderItems(
-      orderItems.map((item) =>
-        item.menuItem.id === menuItemId
-          ? { ...item, extraUnits: Math.max(0, item.extraUnits + change) }
-          : item
-      )
+      orderItems
+        .map((item) =>
+          item.menuItem.id === menuItemId
+            ? { ...item, extraUnits: Math.max(0, item.extraUnits + change) }
+            : item
+        )
+        .filter((item) => item.quantity > 0 || item.extraUnits > 0)
     );
   };
 
@@ -269,7 +277,9 @@ const PublicOrder = () => {
                           <div className="flex-1">
                             <p className="font-medium text-sm">{item.menuItem.name}</p>
                             <p className="text-xs text-muted-foreground">
-                              {formatPrice(item.menuItem.base_price, item.menuItem.currency)} base
+                              {item.quantity > 0 
+                                ? `${formatPrice(item.menuItem.base_price, item.menuItem.currency)} base`
+                                : "Only extra units"}
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
