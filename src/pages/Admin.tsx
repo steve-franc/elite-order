@@ -171,8 +171,11 @@ const Admin = () => {
         <div className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardHeader className="pb-3">
-              <CardDescription className="flex items-center gap-2">
-                <Users className="h-4 w-4" />
+              <CardDescription className="flex items-center gap-2">Total Users
+
+
+
+              <Users className="h-4 w-4" />
                 Total Staff
               </CardDescription>
               <CardTitle className="text-3xl">{staff.length}</CardTitle>
