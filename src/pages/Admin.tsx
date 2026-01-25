@@ -5,14 +5,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Shield, Users, ShoppingBag, TrendingUp, Calendar, AlertCircle } from "lucide-react";
-import { format, subDays } from "date-fns";
+import { Shield, Users, ShoppingBag, TrendingUp, Calendar, AlertCircle, UserMinus } from "lucide-react";
+import { format, subDays, startOfDay, endOfDay } from "date-fns";
 import { formatPrice } from "@/lib/currency";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Navigate } from "react-router-dom";
 import { useRestaurantContext } from "@/hooks/useRestaurantContext";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 interface StaffMember {
   id: string;
   email: string;
@@ -53,6 +64,7 @@ const Admin = () => {
   const { restaurantId, loading: restaurantLoading } = useRestaurantContext();
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [todayOrders, setTodayOrders] = useState<Order[]>([]);
   const [reports, setReports] = useState<DailyReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState("7");
@@ -64,12 +76,29 @@ const Admin = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      await Promise.all([fetchStaff(), fetchOrders(), fetchReports()]);
+      await Promise.all([fetchStaff(), fetchOrders(), fetchTodayOrders(), fetchReports()]);
     } catch (error) {
       toast.error("Failed to load admin data");
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchTodayOrders = async () => {
+    if (!restaurantId) return;
+    
+    const today = new Date();
+    const start = startOfDay(today);
+    const end = endOfDay(today);
+    
+    const { data } = await supabase
+      .from("orders")
+      .select(`*, profiles!orders_staff_id_fkey(full_name)`)
+      .eq("restaurant_id", restaurantId)
+      .gte("created_at", start.toISOString())
+      .lte("created_at", end.toISOString());
+    
+    setTodayOrders(data as any || []);
   };
   const fetchStaff = async () => {
     if (!restaurantId) {
@@ -114,15 +143,16 @@ const Admin = () => {
     setStaff(staffMembers);
   };
   const fetchOrders = async () => {
+    if (!restaurantId) return;
+    
     const startDate = subDays(new Date(), parseInt(dateFilter));
-    const {
-      data
-    } = await supabase.from("orders").select(`
-        *,
-        profiles!orders_staff_id_fkey(full_name)
-      `).gte("created_at", startDate.toISOString()).order("created_at", {
-      ascending: false
-    });
+    const { data } = await supabase
+      .from("orders")
+      .select(`*, profiles!orders_staff_id_fkey(full_name)`)
+      .eq("restaurant_id", restaurantId)
+      .gte("created_at", startDate.toISOString())
+      .order("created_at", { ascending: false });
+    
     setOrders(data as any || []);
   };
   const fetchReports = async () => {
@@ -174,6 +204,32 @@ const Admin = () => {
       toast.error("Failed to update role");
     }
   };
+
+  const handleRemoveStaff = async (userId: string, userName: string) => {
+    try {
+      if (!restaurantId) throw new Error("Restaurant not selected");
+
+      // Remove user's role for this restaurant
+      await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", userId)
+        .eq("restaurant_id", restaurantId);
+
+      // Remove user's membership from this restaurant
+      const { error } = await supabase
+        .from("restaurant_memberships")
+        .delete()
+        .eq("user_id", userId)
+        .eq("restaurant_id", restaurantId);
+
+      if (error) throw error;
+      toast.success(`${userName} has been removed from the restaurant`);
+      fetchStaff();
+    } catch (error) {
+      toast.error("Failed to remove staff member");
+    }
+  };
   if (roleLoading || restaurantLoading) {
     return <Layout>
         <div className="flex items-center justify-center min-h-[60vh]">
@@ -184,7 +240,7 @@ const Admin = () => {
   if (!isManager) {
     return <Navigate to="/" replace />;
   }
-  const totalRevenue = orders.reduce((sum, order) => sum + Number(order.total), 0);
+  const todayRevenue = todayOrders.reduce((sum, order) => sum + Number(order.total), 0);
   const pendingStaff = staff.filter(s => !s.role);
   return <Layout>
       <div className="max-w-7xl mx-auto space-y-6">
@@ -227,9 +283,9 @@ const Admin = () => {
             <CardHeader className="pb-3">
               <CardDescription className="flex items-center gap-2">
                 <ShoppingBag className="h-4 w-4" />
-                Total Orders
+                Today's Orders
               </CardDescription>
-              <CardTitle className="text-3xl">{orders.length}</CardTitle>
+              <CardTitle className="text-3xl">{todayOrders.length}</CardTitle>
             </CardHeader>
           </Card>
 
@@ -237,10 +293,10 @@ const Admin = () => {
             <CardHeader className="pb-3">
               <CardDescription className="flex items-center gap-2">
                 <TrendingUp className="h-4 w-4" />
-                Total Revenue
+                Today's Revenue
               </CardDescription>
               <CardTitle className="text-3xl">
-                {orders.length > 0 ? formatPrice(totalRevenue) : '₺0.00'}
+                {todayOrders.length > 0 ? formatPrice(todayRevenue, todayOrders[0]?.currency) : '₺0.00'}
               </CardTitle>
             </CardHeader>
           </Card>
@@ -260,24 +316,57 @@ const Admin = () => {
                 <CardDescription>Manage staff roles and permissions</CardDescription>
               </CardHeader>
               <CardContent>
-                {loading ? <p className="text-center text-muted-foreground">Loading...</p> : <div className="space-y-3">
-                    {staff.map(member => <div key={member.id} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div>
-                          <p className="font-medium">{member.full_name}</p>
-                          <p className="text-xs text-muted-foreground">ID: {member.id.substring(0, 8)}...</p>
+              {loading ? <p className="text-center text-muted-foreground">Loading...</p> : <div className="space-y-3">
+                    {staff.length === 0 ? (
+                      <p className="text-center text-muted-foreground py-8">No staff members found</p>
+                    ) : (
+                      staff.map(member => (
+                        <div key={member.id} className="flex items-center justify-between p-4 border rounded-lg">
+                          <div>
+                            <p className="font-medium">{member.full_name}</p>
+                            <p className="text-xs text-muted-foreground">ID: {member.id.substring(0, 8)}...</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Select value={member.role} onValueChange={value => handleRoleChange(member.id, value)}>
+                              <SelectTrigger className="w-32">
+                                <SelectValue placeholder="Assign role" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="server">Server</SelectItem>
+                                <SelectItem value="ops">Ops</SelectItem>
+                                <SelectItem value="counter">Counter</SelectItem>
+                                <SelectItem value="manager">Manager</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                  <UserMinus className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Remove Staff Member</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to remove {member.full_name} from this restaurant? 
+                                    They will lose access to all restaurant data and orders.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction 
+                                    onClick={() => handleRemoveStaff(member.id, member.full_name)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    Remove
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
                         </div>
-                        <Select value={member.role} onValueChange={value => handleRoleChange(member.id, value)}>
-                          <SelectTrigger className="w-32">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="server">Server</SelectItem>
-                            <SelectItem value="ops">Ops</SelectItem>
-                            <SelectItem value="counter">Counter</SelectItem>
-                            <SelectItem value="manager">Manager</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>)}
+                      ))
+                    )}
                   </div>}
               </CardContent>
             </Card>
