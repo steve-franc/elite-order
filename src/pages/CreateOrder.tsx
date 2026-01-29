@@ -18,7 +18,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useHaptics } from "@/hooks/use-haptics";
 import { useRestaurantContext } from "@/hooks/useRestaurantContext";
 import { staffOrderSchema, validateInput, PAYMENT_METHODS } from "@/lib/validations";
-
 interface MenuItem {
   id: string;
   name: string;
@@ -40,7 +39,10 @@ const CreateOrder = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const haptics = useHaptics();
-  const { restaurantId, loading: restaurantLoading } = useRestaurantContext();
+  const {
+    restaurantId,
+    loading: restaurantLoading
+  } = useRestaurantContext();
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [paymentMethod, setPaymentMethod] = useState<string>("Cash");
@@ -61,25 +63,18 @@ const CreateOrder = () => {
     const {
       data,
       error
-    } = await supabase.from("menu_items")
-      .select(`
+    } = await supabase.from("menu_items").select(`
         *,
         profiles!menu_items_staff_id_fkey(full_name)
-      `)
-      .eq("is_available", true)
-      .eq("restaurant_id", rid)
-      .order("name");
-    
+      `).eq("is_available", true).eq("restaurant_id", rid).order("name");
     if (error) {
       toast.error("Failed to load menu");
       return;
     }
-    
     const itemsWithStaff = (data || []).map((item: any) => ({
       ...item,
       staff_name: item.profiles?.full_name || "Unknown"
     }));
-    
     setMenuItems(itemsWithStaff);
   };
   const addToOrder = (menuItem: MenuItem) => {
@@ -88,9 +83,7 @@ const CreateOrder = () => {
       toast.error(`This item uses ${menuItem.currency} but the restaurant uses ${currency}`);
       return;
     }
-
     if (isMobile) haptics.tap();
-    
     const existing = orderItems.find(item => item.menuItem.id === menuItem.id);
     if (existing) {
       setOrderItems(orderItems.map(item => item.menuItem.id === menuItem.id ? {
@@ -130,18 +123,16 @@ const CreateOrder = () => {
       toast.error("Please add items to the order");
       return;
     }
-
     if (!restaurantId) {
       toast.error("Restaurant not selected");
       return;
     }
-    
+
     // Validate order input
     const validation = validateInput(staffOrderSchema, {
       notes: notes || undefined,
-      paymentMethod,
+      paymentMethod
     });
-    
     if (!validation.success) {
       toast.error(validation.error);
       return;
@@ -202,8 +193,10 @@ const CreateOrder = () => {
     }
     acc[staffId].items.push(item);
     return acc;
-  }, {} as Record<string, { staffName: string; items: MenuItem[] }>);
-
+  }, {} as Record<string, {
+    staffName: string;
+    items: MenuItem[];
+  }>);
   const toggleStaff = (staffId: string) => {
     const newExpanded = new Set(expandedStaff);
     if (newExpanded.has(staffId)) {
@@ -215,23 +208,16 @@ const CreateOrder = () => {
   };
 
   // Order summary content - reused for both desktop card and mobile drawer
-  const OrderSummaryContent = () => (
-    <div className="space-y-4">
-      {orderItems.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-6">
+  const OrderSummaryContent = () => <div className="space-y-4">
+      {orderItems.length === 0 ? <p className="text-sm text-muted-foreground text-center py-6">
           No items added yet
-        </p>
-      ) : (
-        <div className="space-y-3">
-          {orderItems.map(item => (
-            <div key={item.menuItem.id} className="space-y-2">
+        </p> : <div className="space-y-3">
+          {orderItems.map(item => <div key={item.menuItem.id} className="space-y-2">
               <div className="flex items-start gap-2">
                 <div className="flex-1">
                   <p className="font-medium text-sm">{item.menuItem.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {item.quantity > 0 
-                      ? `${formatPrice(item.menuItem.base_price, item.menuItem.currency)} base`
-                      : "Only extra units"}
+                    {item.quantity > 0 ? `${formatPrice(item.menuItem.base_price, item.menuItem.currency)} base` : "Only extra units"}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -247,8 +233,7 @@ const CreateOrder = () => {
                 </div>
               </div>
               
-              {item.menuItem.per_unit_price && (
-                <div className="flex items-center gap-2 pl-2">
+              {item.menuItem.per_unit_price && <div className="flex items-center gap-2 pl-2">
                   <Label className="text-xs text-muted-foreground flex-1">
                     Extra {item.menuItem.pricing_unit}s (+{formatPrice(item.menuItem.per_unit_price, item.menuItem.currency)})
                   </Label>
@@ -263,18 +248,15 @@ const CreateOrder = () => {
                       <Plus className="h-2 w-2" />
                     </Button>
                   </div>
-                </div>
-              )}
+                </div>}
               
               <div className="flex justify-end">
                 <p className="font-medium text-sm">
                   {formatPrice(calculateItemTotal(item), item.menuItem.currency)}
                 </p>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            </div>)}
+        </div>}
 
       <Separator />
 
@@ -282,14 +264,12 @@ const CreateOrder = () => {
         <div>
           <Label>Payment Method</Label>
           <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="mt-2 grid grid-cols-2 gap-2">
-            {PAYMENT_METHODS.map((method) => (
-              <div key={method} className="flex items-center space-x-2">
+            {PAYMENT_METHODS.map(method => <div key={method} className="flex items-center space-x-2">
                 <RadioGroupItem value={method} id={method.toLowerCase()} />
                 <Label htmlFor={method.toLowerCase()} className="font-normal">
                   {method}
                 </Label>
-              </div>
-            ))}
+              </div>)}
           </RadioGroup>
         </div>
 
@@ -306,13 +286,11 @@ const CreateOrder = () => {
           <span>Total</span>
           <span className="text-primary">{formatPrice(calculateTotal(), currency)}</span>
         </div>
-        <Button size="lg" onClick={handleSubmitOrder} disabled={loading || orderItems.length === 0} className="w-full">
+        <Button size="lg" onClick={handleSubmitOrder} disabled={loading || orderItems.length === 0} className="w-full bg-[#4d0000]">
           {loading ? "Processing..." : "Complete Order"}
         </Button>
       </div>
-    </div>
-  );
-
+    </div>;
   return <Layout>
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
@@ -323,11 +301,12 @@ const CreateOrder = () => {
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Menu Items - Grouped by Staff/Restaurant */}
           <div className="lg:col-span-2 space-y-4 pb-20 md:pb-0">
-            {Object.entries(groupedByStaff).map(([staffId, { staffName, items }]) => {
-              const isExpanded = expandedStaff.has(staffId);
-              
-              return (
-                <Card key={staffId}>
+            {Object.entries(groupedByStaff).map(([staffId, {
+            staffName,
+            items
+          }]) => {
+            const isExpanded = expandedStaff.has(staffId);
+            return <Card key={staffId}>
                   <Collapsible open={isExpanded} onOpenChange={() => toggleStaff(staffId)}>
                     <CollapsibleTrigger className="w-full">
                       <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors">
@@ -341,11 +320,7 @@ const CreateOrder = () => {
                               </CardDescription>
                             </div>
                           </div>
-                          {isExpanded ? (
-                            <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                          ) : (
-                            <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                          )}
+                          {isExpanded ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
                         </div>
                       </CardHeader>
                     </CollapsibleTrigger>
@@ -353,12 +328,7 @@ const CreateOrder = () => {
                     <CollapsibleContent>
                       <CardContent className="pt-0">
                         <div className="grid gap-3 sm:grid-cols-2">
-                          {items.map(item => (
-                            <Card 
-                              key={item.id} 
-                              className="cursor-pointer hover:shadow-md transition-shadow border-2" 
-                              onClick={() => addToOrder(item)}
-                            >
+                          {items.map(item => <Card key={item.id} className="cursor-pointer hover:shadow-md transition-shadow border-2" onClick={() => addToOrder(item)}>
                               <CardHeader className="pb-3">
                                 <div className="flex items-start justify-between">
                                   <CardTitle className="text-base">{item.name}</CardTitle>
@@ -366,44 +336,33 @@ const CreateOrder = () => {
                                     <Badge variant="secondary">
                                       {formatPrice(item.base_price, item.currency)}
                                     </Badge>
-                                    {item.per_unit_price && (
-                                      <Badge variant="outline" className="text-xs">
+                                    {item.per_unit_price && <Badge variant="outline" className="text-xs">
                                         +{formatPrice(item.per_unit_price, item.currency)} / {item.pricing_unit}
-                                      </Badge>
-                                    )}
+                                      </Badge>}
                                   </div>
                                 </div>
-                                {item.description && (
-                                  <CardDescription className="text-sm">{item.description}</CardDescription>
-                                )}
-                                {item.category && (
-                                  <Badge variant="outline" className="w-fit text-xs mt-2">
+                                {item.description && <CardDescription className="text-sm">{item.description}</CardDescription>}
+                                {item.category && <Badge variant="outline" className="w-fit text-xs mt-2">
                                     {item.category}
-                                  </Badge>
-                                )}
+                                  </Badge>}
                               </CardHeader>
-                            </Card>
-                          ))}
+                            </Card>)}
                         </div>
                       </CardContent>
                     </CollapsibleContent>
                   </Collapsible>
-                </Card>
-              );
-            })}
+                </Card>;
+          })}
 
-            {menuItems.length === 0 && (
-              <Card>
+            {menuItems.length === 0 && <Card>
                 <CardContent className="py-12 text-center">
                   <p className="text-muted-foreground">No menu items available</p>
                 </CardContent>
-              </Card>
-            )}
+              </Card>}
           </div>
 
           {/* Order Summary - Desktop */}
-          {!isMobile && (
-            <div className="lg:col-span-1">
+          {!isMobile && <div className="lg:col-span-1">
               <Card className="sticky top-6">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -415,25 +374,18 @@ const CreateOrder = () => {
                   <OrderSummaryContent />
                 </CardContent>
               </Card>
-            </div>
-          )}
+            </div>}
         </div>
 
         {/* Mobile Drawer */}
-        {isMobile && (
-          <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
+        {isMobile && <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
             <DrawerTrigger asChild>
-              <Button 
-                className="fixed bottom-4 left-4 right-4 z-50 h-14 shadow-lg"
-                size="lg"
-              >
+              <Button className="fixed bottom-4 left-4 right-4 z-50 h-14 shadow-lg" size="lg">
                 <ShoppingCart className="h-5 w-5 mr-2" />
                 <span className="flex-1 text-left">Current Order</span>
-                {orderItems.length > 0 && (
-                  <Badge variant="secondary" className="ml-2">
+                {orderItems.length > 0 && <Badge variant="secondary" className="ml-2">
                     {orderItems.length}
-                  </Badge>
-                )}
+                  </Badge>}
                 <span className="ml-2 font-bold">{formatPrice(calculateTotal(), currency)}</span>
                 <ChevronUp className="h-5 w-5 ml-2" />
               </Button>
@@ -449,8 +401,7 @@ const CreateOrder = () => {
                 <OrderSummaryContent />
               </div>
             </DrawerContent>
-          </Drawer>
-        )}
+          </Drawer>}
       </div>
     </Layout>;
 };
