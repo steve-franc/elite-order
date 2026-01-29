@@ -284,7 +284,7 @@ const CreateOrder = () => {
       <div className="space-y-2">
         <div className="flex justify-between text-lg font-bold">
           <span>Total</span>
-          <span className="text-primary">{formatPrice(calculateTotal(), currency)}</span>
+          <span className="text-[#4d0000]">{formatPrice(calculateTotal(), currency)}</span>
         </div>
         <Button size="lg" onClick={handleSubmitOrder} disabled={loading || orderItems.length === 0} className="w-full bg-[#4d0000]">
           {loading ? "Processing..." : "Complete Order"}
