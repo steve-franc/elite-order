@@ -27,8 +27,6 @@ interface MenuItem {
   description: string | null;
   pricing_unit: string;
   currency: string;
-  staff_id: string;
-  staff_name?: string;
 }
 interface OrderItem {
   menuItem: MenuItem;
@@ -41,6 +39,7 @@ const CreateOrder = () => {
   const haptics = useHaptics();
   const {
     restaurantId,
+    restaurantName,
     loading: restaurantLoading
   } = useRestaurantContext();
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -49,7 +48,7 @@ const CreateOrder = () => {
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [currency] = useState("TRY");
-  const [expandedStaff, setExpandedStaff] = useState<Set<string>>(new Set());
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [drawerOpen, setDrawerOpen] = useState(false);
   useEffect(() => {
     if (restaurantLoading) return;
@@ -63,19 +62,16 @@ const CreateOrder = () => {
     const {
       data,
       error
-    } = await supabase.from("menu_items").select(`
-        *,
-        profiles!menu_items_staff_id_fkey(full_name)
-      `).eq("is_available", true).eq("restaurant_id", rid).order("name");
+    } = await supabase.from("menu_items").select("*")
+      .eq("is_available", true)
+      .eq("restaurant_id", rid)
+      .order("category", { ascending: true })
+      .order("name", { ascending: true });
     if (error) {
       toast.error("Failed to load menu");
       return;
     }
-    const itemsWithStaff = (data || []).map((item: any) => ({
-      ...item,
-      staff_name: item.profiles?.full_name || "Unknown"
-    }));
-    setMenuItems(itemsWithStaff);
+    setMenuItems(data || []);
   };
   const addToOrder = (menuItem: MenuItem) => {
     // Validate currency matches restaurant currency
@@ -182,29 +178,24 @@ const CreateOrder = () => {
       setLoading(false);
     }
   };
-  // Group by staff member (restaurant)
-  const groupedByStaff = menuItems.reduce((acc, item) => {
-    const staffId = item.staff_id;
-    if (!acc[staffId]) {
-      acc[staffId] = {
-        staffName: item.staff_name || "Unknown",
-        items: []
-      };
+  // Group by category
+  const groupedByCategory = menuItems.reduce((acc, item) => {
+    const category = item.category || "Uncategorized";
+    if (!acc[category]) {
+      acc[category] = [];
     }
-    acc[staffId].items.push(item);
+    acc[category].push(item);
     return acc;
-  }, {} as Record<string, {
-    staffName: string;
-    items: MenuItem[];
-  }>);
-  const toggleStaff = (staffId: string) => {
-    const newExpanded = new Set(expandedStaff);
-    if (newExpanded.has(staffId)) {
-      newExpanded.delete(staffId);
+  }, {} as Record<string, MenuItem[]>);
+
+  const toggleCategory = (category: string) => {
+    const newExpanded = new Set(expandedCategories);
+    if (newExpanded.has(category)) {
+      newExpanded.delete(category);
     } else {
-      newExpanded.add(staffId);
+      newExpanded.add(category);
     }
-    setExpandedStaff(newExpanded);
+    setExpandedCategories(newExpanded);
   };
 
   // Order summary content - reused for both desktop card and mobile drawer
@@ -294,31 +285,29 @@ const CreateOrder = () => {
   return <Layout>
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
-          <h2 className="text-3xl font-bold">Create Order</h2>
+          <div className="flex items-center gap-3 mb-2">
+            <Store className="h-6 w-6 text-primary" />
+            <h2 className="text-3xl font-bold">{restaurantName || "Create Order"}</h2>
+          </div>
           <p className="text-muted-foreground">Select items to add to the order</p>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* Menu Items - Grouped by Staff/Restaurant */}
+          {/* Menu Items - Grouped by Category */}
           <div className="lg:col-span-2 space-y-4 pb-20 md:pb-0">
-            {Object.entries(groupedByStaff).map(([staffId, {
-            staffName,
-            items
-          }]) => {
-            const isExpanded = expandedStaff.has(staffId);
-            return <Card key={staffId}>
-                  <Collapsible open={isExpanded} onOpenChange={() => toggleStaff(staffId)}>
+            {Object.entries(groupedByCategory).map(([category, items]) => {
+              const isExpanded = expandedCategories.has(category);
+              return (
+                <Card key={category}>
+                  <Collapsible open={isExpanded} onOpenChange={() => toggleCategory(category)}>
                     <CollapsibleTrigger className="w-full">
                       <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <Store className="h-5 w-5 text-[#4d0000]" />
-                            <div className="text-left">
-                              <CardTitle className="text-lg">{staffName}</CardTitle>
-                              <CardDescription className="text-sm">
-                                {items.length} {items.length === 1 ? 'item' : 'items'} available
-                              </CardDescription>
-                            </div>
+                          <div className="text-left">
+                            <CardTitle className="text-lg">{category}</CardTitle>
+                            <CardDescription className="text-sm">
+                              {items.length} {items.length === 1 ? 'item' : 'items'} available
+                            </CardDescription>
                           </div>
                           {isExpanded ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
                         </div>
@@ -328,7 +317,8 @@ const CreateOrder = () => {
                     <CollapsibleContent>
                       <CardContent className="pt-0">
                         <div className="grid gap-3 sm:grid-cols-2">
-                          {items.map(item => <Card key={item.id} className="cursor-pointer hover:shadow-md transition-shadow border-2" onClick={() => addToOrder(item)}>
+                          {items.map(item => (
+                            <Card key={item.id} className="cursor-pointer hover:shadow-md transition-shadow border-2" onClick={() => addToOrder(item)}>
                               <CardHeader className="pb-3">
                                 <div className="flex items-start justify-between">
                                   <CardTitle className="text-base">{item.name}</CardTitle>
@@ -336,29 +326,32 @@ const CreateOrder = () => {
                                     <Badge variant="secondary">
                                       {formatPrice(item.base_price, item.currency)}
                                     </Badge>
-                                    {item.per_unit_price && <Badge variant="outline" className="text-xs">
+                                    {item.per_unit_price && (
+                                      <Badge variant="outline" className="text-xs">
                                         +{formatPrice(item.per_unit_price, item.currency)} / {item.pricing_unit}
-                                      </Badge>}
+                                      </Badge>
+                                    )}
                                   </div>
                                 </div>
                                 {item.description && <CardDescription className="text-sm">{item.description}</CardDescription>}
-                                {item.category && <Badge variant="outline" className="w-fit text-xs mt-2">
-                                    {item.category}
-                                  </Badge>}
                               </CardHeader>
-                            </Card>)}
+                            </Card>
+                          ))}
                         </div>
                       </CardContent>
                     </CollapsibleContent>
                   </Collapsible>
-                </Card>;
-          })}
+                </Card>
+              );
+            })}
 
-            {menuItems.length === 0 && <Card>
+            {menuItems.length === 0 && (
+              <Card>
                 <CardContent className="py-12 text-center">
                   <p className="text-muted-foreground">No menu items available</p>
                 </CardContent>
-              </Card>}
+              </Card>
+            )}
           </div>
 
           {/* Order Summary - Desktop */}
