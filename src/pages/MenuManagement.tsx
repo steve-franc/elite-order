@@ -62,16 +62,12 @@ const MenuManagement = () => {
 
   const fetchMenuItems = async (rid: string) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("User not authenticated");
-
       const {
         data,
         error
       } = await supabase
         .from("menu_items")
         .select("*")
-        .eq("staff_id", user.id)
         .eq("restaurant_id", rid)
         .order("category", { ascending: true })
         .order("name", { ascending: true });

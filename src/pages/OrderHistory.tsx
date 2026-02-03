@@ -142,10 +142,25 @@ const OrderHistory = () => {
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
+      // Get the user's restaurant
+      const { data: membership } = await supabase
+        .from("restaurant_memberships")
+        .select("restaurant_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!membership?.restaurant_id) {
+        toast.error("No restaurant found");
+        setGeneratingReport(false);
+        return;
+      }
+
+      const restaurantId = membership.restaurant_id;
+
       // Get the most recent daily report to find last end day
       const {
         data: lastReport
-      } = await supabase.from("daily_reports").select("report_date").eq("staff_id", user.id).order("report_date", {
+      } = await supabase.from("daily_reports").select("report_date").eq("staff_id", user.id).eq("restaurant_id", restaurantId).order("report_date", {
         ascending: false
       }).limit(1).maybeSingle();
       let cutoffDate: Date;
@@ -158,11 +173,11 @@ const OrderHistory = () => {
       }
       const today = format(new Date(), "yyyy-MM-dd");
 
-      // Fetch all orders since last end day
+      // Fetch all orders since last end day for this restaurant
       const {
         data: ordersData,
         error: ordersError
-      } = await supabase.from("orders").select("*").gte("created_at", cutoffDate.toISOString()).order("created_at", {
+      } = await supabase.from("orders").select("*").eq("restaurant_id", restaurantId).gte("created_at", cutoffDate.toISOString()).order("created_at", {
         ascending: false
       });
       if (ordersError) throw ordersError;
@@ -208,6 +223,7 @@ const OrderHistory = () => {
         error: reportError
       } = await supabase.from("daily_reports").upsert({
         staff_id: user.id,
+        restaurant_id: restaurantId,
         report_date: today,
         total_orders: ordersData.length,
         total_revenue: totalRevenue,
