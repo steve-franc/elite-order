@@ -487,8 +487,68 @@ const Admin = () => {
               </Select>
             </div>
 
-            {loading ? <p className="text-center text-muted-foreground">Loading...</p> : <div className="space-y-3">
-                {reports.map(report => <Card key={report.id}>
+            {loading ? <p className="text-center text-muted-foreground">Loading...</p> : <>
+              {/* Summary Totals */}
+              {reports.length > 0 && (
+                <Card className="bg-primary/5 border-primary/20">
+                  <CardHeader>
+                    <CardTitle className="text-xl">Period Summary</CardTitle>
+                    <CardDescription>Totals for the selected period</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Total Revenue</p>
+                        <p className="text-3xl font-bold text-primary">
+                          {formatPrice(
+                            reports.reduce((sum, r) => sum + Number(r.total_revenue), 0),
+                            reports[0]?.currency || 'TRY'
+                          )}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Total Orders</p>
+                        <p className="text-3xl font-bold">
+                          {reports.reduce((sum, r) => sum + r.total_orders, 0)}
+                        </p>
+                      </div>
+                      <div className="col-span-2 md:col-span-1">
+                        <p className="text-sm text-muted-foreground mb-2">By Payment Method</p>
+                        <div className="space-y-1">
+                          {(() => {
+                            const aggregated: Record<string, { count: number; total: number }> = {};
+                            reports.forEach(report => {
+                              Object.entries(report.payment_methods || {}).forEach(([method, data]) => {
+                                if (!aggregated[method]) aggregated[method] = { count: 0, total: 0 };
+                                aggregated[method].count += data.count;
+                                aggregated[method].total += data.total;
+                              });
+                            });
+                            return Object.entries(aggregated).map(([method, data]) => (
+                              <div key={method} className="flex justify-between text-sm">
+                                <span>{method}</span>
+                                <span className="font-medium">
+                                  {data.count} orders · {formatPrice(data.total, reports[0]?.currency || 'TRY')}
+                                </span>
+                              </div>
+                            ));
+                          })()}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Individual Reports */}
+              <div className="space-y-3">
+                {reports.length === 0 ? (
+                  <Card>
+                    <CardContent className="py-12 text-center">
+                      <p className="text-muted-foreground">No daily reports found for this period</p>
+                    </CardContent>
+                  </Card>
+                ) : reports.map(report => <Card key={report.id}>
                     <CardHeader>
                       <div className="flex items-center justify-between">
                         <div>
@@ -500,7 +560,7 @@ const Admin = () => {
                           </CardDescription>
                         </div>
                         <Badge variant="outline" className="text-lg px-4 py-2">
-                          {formatPrice(report.total_revenue, report.currency || 'USD')}
+                          {formatPrice(report.total_revenue, report.currency || 'TRY')}
                         </Badge>
                       </div>
                     </CardHeader>
@@ -510,18 +570,19 @@ const Admin = () => {
                           <p className="text-sm text-muted-foreground">Total Orders</p>
                           <p className="text-2xl font-bold">{report.total_orders}</p>
                         </div>
-                          <div>
-                            <p className="text-sm text-muted-foreground">Payment Methods</p>
-                            <div className="mt-1 space-y-1">
-                              {Object.entries(report.payment_methods).map(([method, data]) => <p key={method} className="text-sm">
-                                  {method}: {data.count} ({formatPrice(data.total, report.currency || 'USD')})
-                                </p>)}
-                            </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Payment Methods</p>
+                          <div className="mt-1 space-y-1">
+                            {Object.entries(report.payment_methods || {}).map(([method, data]) => <p key={method} className="text-sm">
+                                {method}: {data.count} ({formatPrice(data.total, report.currency || 'TRY')})
+                              </p>)}
                           </div>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>)}
-              </div>}
+              </div>
+            </>}
           </TabsContent>
         </Tabs>
       </div>
