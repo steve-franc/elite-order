@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { Printer, ArrowLeft } from "lucide-react";
 import { format } from "date-fns";
+import { formatPrice } from "@/lib/currency";
 
 interface OrderData {
   id: string;
@@ -16,6 +17,7 @@ interface OrderData {
   payment_method: string;
   notes: string | null;
   created_at: string;
+  currency: string;
 }
 
 interface OrderItemData {
@@ -127,10 +129,10 @@ const Receipt = () => {
                   <div className="flex-1">
                     <p className="font-medium">{item.menu_item_name}</p>
                     <p className="text-muted-foreground">
-                      {item.quantity} × ${item.price_at_time.toFixed(2)}
+                      {item.quantity} × {formatPrice(item.price_at_time, order.currency)}
                     </p>
                   </div>
-                  <p className="font-medium">${item.subtotal.toFixed(2)}</p>
+                  <p className="font-medium">{formatPrice(item.subtotal, order.currency)}</p>
                 </div>
               ))}
             </div>
@@ -140,7 +142,7 @@ const Receipt = () => {
             <div className="space-y-2">
               <div className="flex justify-between text-xl font-bold">
                 <span>Total</span>
-                <span className="text-primary">${order.total.toFixed(2)}</span>
+                <span className="text-primary">{formatPrice(order.total, order.currency)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Payment Method</span>
