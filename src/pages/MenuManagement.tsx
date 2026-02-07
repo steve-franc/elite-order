@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Share2, Copy, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -32,6 +32,8 @@ const MenuManagement = () => {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [formData, setFormData] = useState({
     name: "",
@@ -218,6 +220,41 @@ const MenuManagement = () => {
     acc[category].push(item);
     return acc;
   }, {} as Record<string, MenuItem[]>);
+
+  const availableItems = menuItems.filter(item => item.is_available);
+  const groupedAvailable = availableItems.reduce((acc, item) => {
+    const category = item.category || "Uncategorized";
+    if (!acc[category]) acc[category] = [];
+    acc[category].push(item);
+    return acc;
+  }, {} as Record<string, MenuItem[]>);
+
+  const generateMenuText = () => {
+    let text = "📋 MENU\n\n";
+    Object.entries(groupedAvailable).forEach(([category, items]) => {
+      text += `━━━ ${category.toUpperCase()} ━━━\n`;
+      items.forEach(item => {
+        text += `• ${item.name} - ${formatPrice(item.base_price, item.currency)}`;
+        if (item.per_unit_price) {
+          text += ` (+${formatPrice(item.per_unit_price, item.currency)}/${item.pricing_unit})`;
+        }
+        text += "\n";
+        if (item.description) {
+          text += `  ${item.description}\n`;
+        }
+      });
+      text += "\n";
+    });
+    return text.trim();
+  };
+
+  const handleCopyMenu = async () => {
+    const text = generateMenuText();
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    toast.success("Menu copied to clipboard!");
+    setTimeout(() => setCopied(false), 2000);
+  };
   return <Layout>
       <div className="max-w-6xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
@@ -229,12 +266,18 @@ const MenuManagement = () => {
           setDialogOpen(open);
           if (!open) resetForm();
         }}>
-            <DialogTrigger asChild>
-              <Button className="bg-[#435663]">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Item
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setShareDialogOpen(true)} disabled={availableItems.length === 0}>
+                <Share2 className="h-4 w-4 mr-2" />
+                Share Menu
               </Button>
-            </DialogTrigger>
+              <DialogTrigger asChild>
+                <Button className="bg-[#435663]">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Item
+                </Button>
+              </DialogTrigger>
+            </div>
             <DialogContent className="max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingItem ? "Edit" : "Add"} Menu Item</DialogTitle>
@@ -352,6 +395,28 @@ const MenuManagement = () => {
                   </Button>
                 </div>
               </form>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
+            <DialogContent className="max-h-[90vh]">
+              <DialogHeader>
+                <DialogTitle>Share Menu</DialogTitle>
+                <DialogDescription>
+                  Copy the menu text below to share via WhatsApp, SMS, or any other platform.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <Textarea 
+                  value={generateMenuText()} 
+                  readOnly 
+                  className="min-h-[300px] font-mono text-sm"
+                />
+                <Button onClick={handleCopyMenu} className="w-full">
+                  {copied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
+                  {copied ? "Copied!" : "Copy to Clipboard"}
+                </Button>
+              </div>
             </DialogContent>
           </Dialog>
         </div>
