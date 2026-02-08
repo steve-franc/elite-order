@@ -94,17 +94,29 @@ const CreateOrder = () => {
       }]);
     }
   };
+  // Only remove item when both base and per-unit contributions are zero
+  const shouldKeepItem = (item: OrderItem) => {
+    // Keep if quantity > 0 (has base order)
+    if (item.quantity > 0) return true;
+    // Keep if extraUnits > 0 (has per-unit order)
+    if (item.extraUnits > 0) return true;
+    // Keep if item has per_unit_price - allows adding extra units even with 0 base quantity
+    if (item.menuItem.per_unit_price && item.menuItem.per_unit_price > 0) return true;
+    // Remove if base_price is also 0 (nothing to order)
+    return item.menuItem.base_price > 0;
+  };
+
   const updateQuantity = (menuItemId: string, change: number) => {
     setOrderItems(orderItems.map(item => item.menuItem.id === menuItemId ? {
       ...item,
       quantity: Math.max(0, item.quantity + change)
-    } : item).filter(item => item.quantity > 0 || item.extraUnits > 0));
+    } : item).filter(shouldKeepItem));
   };
   const updateExtraUnits = (menuItemId: string, change: number) => {
     setOrderItems(orderItems.map(item => item.menuItem.id === menuItemId ? {
       ...item,
       extraUnits: Math.max(0, item.extraUnits + change)
-    } : item).filter(item => item.quantity > 0 || item.extraUnits > 0));
+    } : item).filter(shouldKeepItem));
   };
   const calculateItemTotal = (item: OrderItem) => {
     const baseTotal = item.menuItem.base_price * item.quantity;
