@@ -1,4 +1,4 @@
-import { ShoppingCart, Menu, History, Shield, Package, LogOut, UtensilsCrossed } from "lucide-react";
+import { ShoppingCart, Menu, History, Shield, Package, LogOut, UtensilsCrossed, Receipt } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 
 const menuItems = [
   { title: "Create Order", url: "/order/create", icon: ShoppingCart },
+  { title: "Tabs", url: "/tabs", icon: Receipt },
   { title: "Orders", url: "/orders", icon: History },
 ];
 

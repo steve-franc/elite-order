@@ -13,6 +13,7 @@ import Receipt from "./pages/Receipt";
 import Admin from "./pages/Admin";
 import PublicOrder from "./pages/PublicOrder";
 import Inventory from "./pages/Inventory";
+import TabsPage from "./pages/Tabs";
 import NotFound from "./pages/NotFound";
 import { NotificationSound } from "./components/NotificationSound";
 import ScrollToTop from "./components/ScrollToTop";
@@ -101,6 +102,14 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <Inventory />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/tabs"
+            element={
+              <ProtectedRoute>
+                <TabsPage />
               </ProtectedRoute>
             }
           />

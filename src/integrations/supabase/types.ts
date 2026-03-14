@@ -410,6 +410,110 @@ export type Database = {
         }
         Relationships: []
       }
+      tab_items: {
+        Row: {
+          added_at: string
+          base_price_at_time: number
+          extra_units: number
+          id: string
+          menu_item_id: string
+          menu_item_name: string
+          per_unit_price_at_time: number | null
+          quantity: number
+          subtotal: number
+          tab_id: string
+        }
+        Insert: {
+          added_at?: string
+          base_price_at_time: number
+          extra_units?: number
+          id?: string
+          menu_item_id: string
+          menu_item_name: string
+          per_unit_price_at_time?: number | null
+          quantity: number
+          subtotal: number
+          tab_id: string
+        }
+        Update: {
+          added_at?: string
+          base_price_at_time?: number
+          extra_units?: number
+          id?: string
+          menu_item_id?: string
+          menu_item_name?: string
+          per_unit_price_at_time?: number | null
+          quantity?: number
+          subtotal?: number
+          tab_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tab_items_menu_item_id_fkey"
+            columns: ["menu_item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tab_items_tab_id_fkey"
+            columns: ["tab_id"]
+            isOneToOne: false
+            referencedRelation: "tabs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tabs: {
+        Row: {
+          closed_at: string | null
+          created_at: string
+          currency: string
+          customer_name: string | null
+          id: string
+          notes: string | null
+          payment_method: string | null
+          restaurant_id: string
+          staff_id: string
+          status: string
+          total: number
+        }
+        Insert: {
+          closed_at?: string | null
+          created_at?: string
+          currency?: string
+          customer_name?: string | null
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          restaurant_id: string
+          staff_id: string
+          status?: string
+          total?: number
+        }
+        Update: {
+          closed_at?: string | null
+          created_at?: string
+          currency?: string
+          customer_name?: string | null
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          restaurant_id?: string
+          staff_id?: string
+          status?: string
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tabs_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
