@@ -45,7 +45,9 @@ const MenuManagement = () => {
     per_unit_price: "",
     description: "",
     pricing_unit: "per piece",
-    currency: "TRY"
+    currency: "TRY",
+    is_inventory_item: false,
+    stock_qty: ""
   });
   useEffect(() => {
     if (restaurantLoading) return;
