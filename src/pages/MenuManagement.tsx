@@ -203,7 +203,9 @@ const MenuManagement = () => {
       per_unit_price: item.per_unit_price?.toString() || "",
       description: item.description || "",
       pricing_unit: item.pricing_unit || "per piece",
-      currency: "TRY"
+      currency: "TRY",
+      is_inventory_item: item.is_inventory_item,
+      stock_qty: item.stock_qty?.toString() || ""
     });
     setDialogOpen(true);
   };
@@ -215,7 +217,9 @@ const MenuManagement = () => {
       per_unit_price: "",
       description: "",
       pricing_unit: "per piece",
-      currency: "TRY"
+      currency: "TRY",
+      is_inventory_item: false,
+      stock_qty: ""
     });
     setEditingItem(null);
   };
