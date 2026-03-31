@@ -27,6 +27,8 @@ interface MenuItem {
   is_available: boolean;
   pricing_unit: string;
   currency: string;
+  is_inventory_item: boolean;
+  stock_qty: number;
 }
 const MenuManagement = () => {
   const { restaurantId, loading: restaurantLoading } = useRestaurantContext();
