@@ -3,12 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
-import { Plus, Minus, ShoppingCart, ChevronDown, ChevronRight, Store, ChevronUp, X } from "lucide-react";
+import { Plus, Minus, ShoppingCart, ChevronDown, ChevronRight, Store, ChevronUp, X, Calculator } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { formatPrice } from "@/lib/currency";
@@ -50,6 +51,7 @@ const CreateOrder = () => {
   const [currency] = useState("TRY");
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [amountGiven, setAmountGiven] = useState("");
   useEffect(() => {
     if (restaurantLoading) return;
     if (!restaurantId) return;
@@ -129,6 +131,7 @@ const CreateOrder = () => {
     setPaymentMethod("Cash");
     setNotes("");
     setDrawerOpen(false);
+    setAmountGiven("");
   };
   const calculateItemTotal = (item: OrderItem) => {
     const baseTotal = item.menuItem.base_price * item.quantity;
@@ -330,6 +333,32 @@ const CreateOrder = () => {
           <span>Total</span>
           <span className="text-primary">{formatPrice(calculateTotal(), currency)}</span>
         </div>
+
+        {/* Change Calculator */}
+        {orderItems.length > 0 && (
+          <div className="flex items-center gap-2 py-2">
+            <Calculator className="h-4 w-4 text-muted-foreground shrink-0" />
+            <Input
+              type="number"
+              placeholder="Amount given"
+              value={amountGiven}
+              onChange={(e) => setAmountGiven(e.target.value)}
+              className="max-w-28 h-8 text-sm"
+              min={0}
+              step="0.01"
+            />
+            {amountGiven && !isNaN(parseFloat(amountGiven)) && (
+              <div className="flex items-center gap-1 text-sm">
+                <span className="text-muted-foreground">Change:</span>
+                <span className={`font-bold ${parseFloat(amountGiven) - calculateTotal() >= 0 ? "text-green-600" : "text-destructive"}`}>
+                  {formatPrice(Math.abs(parseFloat(amountGiven) - calculateTotal()), currency)}
+                  {parseFloat(amountGiven) - calculateTotal() < 0 && " short"}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
         <Button size="lg" onClick={handleSubmitOrder} disabled={loading || orderItems.length === 0} className="w-full">
           {loading ? "Processing..." : "Complete Order"}
         </Button>

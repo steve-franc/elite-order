@@ -4,8 +4,11 @@ import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Shield, Users, ShoppingBag, TrendingUp, Calendar, AlertCircle, UserMinus } from "lucide-react";
+import { Shield, Users, ShoppingBag, TrendingUp, Calendar, AlertCircle, UserMinus, Target, Save } from "lucide-react";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
 import { formatPrice } from "@/lib/currency";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -68,9 +71,13 @@ const Admin = () => {
   const [reports, setReports] = useState<DailyReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState("7");
+  const [fixedDailyBills, setFixedDailyBills] = useState<number>(0);
+  const [editingBills, setEditingBills] = useState(false);
+  const [billsInput, setBillsInput] = useState("");
   useEffect(() => {
     if (isManager && restaurantId) {
       fetchData();
+      fetchFixedDailyBills();
     }
   }, [isManager, restaurantId, dateFilter]);
   const fetchData = async () => {
@@ -82,6 +89,35 @@ const Admin = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchFixedDailyBills = async () => {
+    if (!restaurantId) return;
+    const { data } = await supabase
+      .from("restaurant_settings")
+      .select("fixed_daily_bills")
+      .eq("restaurant_id", restaurantId)
+      .maybeSingle();
+    if (data) {
+      setFixedDailyBills(Number(data.fixed_daily_bills) || 0);
+      setBillsInput(String(data.fixed_daily_bills || 0));
+    }
+  };
+
+  const saveFixedDailyBills = async () => {
+    if (!restaurantId) return;
+    const value = parseFloat(billsInput) || 0;
+    const { error } = await supabase
+      .from("restaurant_settings")
+      .update({ fixed_daily_bills: value })
+      .eq("restaurant_id", restaurantId);
+    if (error) {
+      toast.error("Failed to save daily bills");
+      return;
+    }
+    setFixedDailyBills(value);
+    setEditingBills(false);
+    toast.success("Daily bills target updated");
   };
 
   const fetchTodayOrders = async () => {
@@ -369,6 +405,62 @@ const Admin = () => {
             </CardHeader>
           </Card>
         </div>
+
+        {/* Daily Bills Progress */}
+        <Card className="border-primary/20">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Target className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg">Daily Bills Target</CardTitle>
+              </div>
+              {!editingBills ? (
+                <Button variant="outline" size="sm" onClick={() => { setEditingBills(true); setBillsInput(String(fixedDailyBills)); }}>
+                  Edit
+                </Button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    value={billsInput}
+                    onChange={(e) => setBillsInput(e.target.value)}
+                    className="w-28 h-8"
+                    min={0}
+                    step="0.01"
+                  />
+                  <Button size="sm" onClick={saveFixedDailyBills}>
+                    <Save className="h-3 w-3 mr-1" />
+                    Save
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => setEditingBills(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              )}
+            </div>
+            <CardDescription>
+              {fixedDailyBills > 0
+                ? `Target: ${formatPrice(fixedDailyBills, todayOrders[0]?.currency || 'TRY')} daily`
+                : "Set your daily operating costs to track profitability"}
+            </CardDescription>
+          </CardHeader>
+          {fixedDailyBills > 0 && (
+            <CardContent className="space-y-3">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Revenue vs Daily Bills</span>
+                <span className="font-medium">
+                  {formatPrice(todayRevenue, todayOrders[0]?.currency || 'TRY')} / {formatPrice(fixedDailyBills, todayOrders[0]?.currency || 'TRY')}
+                </span>
+              </div>
+              <Progress value={Math.min(100, fixedDailyBills > 0 ? (todayRevenue / fixedDailyBills) * 100 : 0)} className="h-4" />
+              <p className={`text-sm font-medium ${todayRevenue >= fixedDailyBills ? "text-green-600" : "text-amber-600"}`}>
+                {todayRevenue >= fixedDailyBills
+                  ? `✓ Bills covered! ${formatPrice(todayRevenue - fixedDailyBills, todayOrders[0]?.currency || 'TRY')} profit`
+                  : `${formatPrice(fixedDailyBills - todayRevenue, todayOrders[0]?.currency || 'TRY')} more needed`}
+              </p>
+            </CardContent>
+          )}
+        </Card>
 
         <Tabs defaultValue="staff" className="space-y-4">
           <TabsList>
