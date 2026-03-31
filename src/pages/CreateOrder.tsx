@@ -131,6 +131,7 @@ const CreateOrder = () => {
     setPaymentMethod("Cash");
     setNotes("");
     setDrawerOpen(false);
+    setAmountGiven("");
   };
   const calculateItemTotal = (item: OrderItem) => {
     const baseTotal = item.menuItem.base_price * item.quantity;
