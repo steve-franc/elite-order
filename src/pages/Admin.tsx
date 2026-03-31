@@ -406,6 +406,62 @@ const Admin = () => {
           </Card>
         </div>
 
+        {/* Daily Bills Progress */}
+        <Card className="border-primary/20">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Target className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg">Daily Bills Target</CardTitle>
+              </div>
+              {!editingBills ? (
+                <Button variant="outline" size="sm" onClick={() => { setEditingBills(true); setBillsInput(String(fixedDailyBills)); }}>
+                  Edit
+                </Button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    value={billsInput}
+                    onChange={(e) => setBillsInput(e.target.value)}
+                    className="w-28 h-8"
+                    min={0}
+                    step="0.01"
+                  />
+                  <Button size="sm" onClick={saveFixedDailyBills}>
+                    <Save className="h-3 w-3 mr-1" />
+                    Save
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => setEditingBills(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              )}
+            </div>
+            <CardDescription>
+              {fixedDailyBills > 0
+                ? `Target: ${formatPrice(fixedDailyBills, todayOrders[0]?.currency || 'TRY')} daily`
+                : "Set your daily operating costs to track profitability"}
+            </CardDescription>
+          </CardHeader>
+          {fixedDailyBills > 0 && (
+            <CardContent className="space-y-3">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Revenue vs Daily Bills</span>
+                <span className="font-medium">
+                  {formatPrice(todayRevenue, todayOrders[0]?.currency || 'TRY')} / {formatPrice(fixedDailyBills, todayOrders[0]?.currency || 'TRY')}
+                </span>
+              </div>
+              <Progress value={Math.min(100, fixedDailyBills > 0 ? (todayRevenue / fixedDailyBills) * 100 : 0)} className="h-4" />
+              <p className={`text-sm font-medium ${todayRevenue >= fixedDailyBills ? "text-green-600" : "text-amber-600"}`}>
+                {todayRevenue >= fixedDailyBills
+                  ? `✓ Bills covered! ${formatPrice(todayRevenue - fixedDailyBills, todayOrders[0]?.currency || 'TRY')} profit`
+                  : `${formatPrice(fixedDailyBills - todayRevenue, todayOrders[0]?.currency || 'TRY')} more needed`}
+              </p>
+            </CardContent>
+          )}
+        </Card>
+
         <Tabs defaultValue="staff" className="space-y-4">
           <TabsList>
             <TabsTrigger value="staff">Staff Management</TabsTrigger>
