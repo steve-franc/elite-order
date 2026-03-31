@@ -365,6 +365,7 @@ export type Database = {
           allow_public_orders: boolean
           created_at: string
           currency: string
+          fixed_daily_bills: number
           id: string
           restaurant_id: string | null
           restaurant_name: string
@@ -374,6 +375,7 @@ export type Database = {
           allow_public_orders?: boolean
           created_at?: string
           currency?: string
+          fixed_daily_bills?: number
           id?: string
           restaurant_id?: string | null
           restaurant_name?: string
@@ -383,6 +385,7 @@ export type Database = {
           allow_public_orders?: boolean
           created_at?: string
           currency?: string
+          fixed_daily_bills?: number
           id?: string
           restaurant_id?: string | null
           restaurant_name?: string

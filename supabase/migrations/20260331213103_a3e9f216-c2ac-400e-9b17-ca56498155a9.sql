@@ -1,0 +1,1 @@
+ALTER TABLE public.restaurant_settings ADD COLUMN fixed_daily_bills numeric NOT NULL DEFAULT 0;
