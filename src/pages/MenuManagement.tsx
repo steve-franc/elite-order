@@ -487,6 +487,9 @@ const MenuManagement = () => {
                               </Badge>
                               {item.per_unit_price && <Badge variant="outline" className="text-xs w-fit">
                                   +{formatPrice(item.per_unit_price, item.currency)} / {item.pricing_unit}
+                                  </Badge>}
+                              {item.is_inventory_item && <Badge variant={item.stock_qty > 0 ? "outline" : "destructive"} className="text-xs w-fit">
+                                  Stock: {item.stock_qty}
                                 </Badge>}
                             </div>
                           </div>
