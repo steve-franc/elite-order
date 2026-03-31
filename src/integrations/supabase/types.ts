@@ -146,11 +146,13 @@ export type Database = {
           description: string | null
           id: string
           is_available: boolean
+          is_inventory_item: boolean
           name: string
           per_unit_price: number | null
           pricing_unit: string | null
           restaurant_id: string | null
           staff_id: string
+          stock_qty: number
           updated_at: string
         }
         Insert: {
@@ -161,11 +163,13 @@ export type Database = {
           description?: string | null
           id?: string
           is_available?: boolean
+          is_inventory_item?: boolean
           name: string
           per_unit_price?: number | null
           pricing_unit?: string | null
           restaurant_id?: string | null
           staff_id: string
+          stock_qty?: number
           updated_at?: string
         }
         Update: {
@@ -176,11 +180,13 @@ export type Database = {
           description?: string | null
           id?: string
           is_available?: boolean
+          is_inventory_item?: boolean
           name?: string
           per_unit_price?: number | null
           pricing_unit?: string | null
           restaurant_id?: string | null
           staff_id?: string
+          stock_qty?: number
           updated_at?: string
         }
         Relationships: [

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,8 @@ interface MenuItem {
   is_available: boolean;
   pricing_unit: string;
   currency: string;
+  is_inventory_item: boolean;
+  stock_qty: number;
 }
 const MenuManagement = () => {
   const { restaurantId, loading: restaurantLoading } = useRestaurantContext();
@@ -42,7 +45,9 @@ const MenuManagement = () => {
     per_unit_price: "",
     description: "",
     pricing_unit: "per piece",
-    currency: "TRY"
+    currency: "TRY",
+    is_inventory_item: false,
+    stock_qty: ""
   });
   useEffect(() => {
     if (restaurantLoading) return;
@@ -133,7 +138,9 @@ const MenuManagement = () => {
         per_unit_price: validation.data.per_unit_price,
         description: validation.data.description,
         pricing_unit: validation.data.pricing_unit,
-        currency: validation.data.currency
+        currency: validation.data.currency,
+        is_inventory_item: formData.is_inventory_item,
+        stock_qty: formData.is_inventory_item ? parseInt(formData.stock_qty) || 0 : 0
       };
       if (editingItem) {
         const {
@@ -198,7 +205,9 @@ const MenuManagement = () => {
       per_unit_price: item.per_unit_price?.toString() || "",
       description: item.description || "",
       pricing_unit: item.pricing_unit || "per piece",
-      currency: "TRY"
+      currency: "TRY",
+      is_inventory_item: item.is_inventory_item,
+      stock_qty: item.stock_qty?.toString() || ""
     });
     setDialogOpen(true);
   };
@@ -210,7 +219,9 @@ const MenuManagement = () => {
       per_unit_price: "",
       description: "",
       pricing_unit: "per piece",
-      currency: "TRY"
+      currency: "TRY",
+      is_inventory_item: false,
+      stock_qty: ""
     });
     setEditingItem(null);
   };
@@ -370,6 +381,34 @@ const MenuManagement = () => {
                     <p className="text-sm text-muted-foreground border rounded-md p-2">₺ Turkish Lira (TRY)</p>
                   </div>
                 </div>
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="is_inventory_item" 
+                      checked={formData.is_inventory_item}
+                      onCheckedChange={(checked) => setFormData({ ...formData, is_inventory_item: checked === true })}
+                    />
+                    <Label htmlFor="is_inventory_item" className="text-sm font-medium">
+                      Inventory Item
+                    </Label>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Track stock for this item. It will become unavailable when stock reaches 0.
+                  </p>
+                  {formData.is_inventory_item && (
+                    <div className="space-y-2">
+                      <Label htmlFor="stock_qty">Stock Quantity</Label>
+                      <Input 
+                        id="stock_qty" 
+                        type="number" 
+                        min="0"
+                        value={formData.stock_qty} 
+                        onChange={e => setFormData({ ...formData, stock_qty: e.target.value })}
+                        placeholder="Enter available quantity"
+                      />
+                    </div>
+                  )}
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="description">Description</Label>
                   <Textarea 
@@ -448,6 +487,9 @@ const MenuManagement = () => {
                               </Badge>
                               {item.per_unit_price && <Badge variant="outline" className="text-xs w-fit">
                                   +{formatPrice(item.per_unit_price, item.currency)} / {item.pricing_unit}
+                                  </Badge>}
+                              {item.is_inventory_item && <Badge variant={item.stock_qty > 0 ? "outline" : "destructive"} className="text-xs w-fit">
+                                  Stock: {item.stock_qty}
                                 </Badge>}
                             </div>
                           </div>

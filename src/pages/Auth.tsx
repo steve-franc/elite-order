@@ -26,15 +26,27 @@ const Auth = () => {
   const [mode, setMode] = useState<AuthMode>("signin");
   const [resetEmail, setResetEmail] = useState("");
   const [showResetPassword, setShowResetPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
   const navigate = useNavigate();
   const {
     user
   } = useAuth();
+
+  // Handle password recovery token from URL
   useEffect(() => {
-    if (user) {
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const type = hashParams.get("type");
+    if (type === "recovery") {
+      setShowNewPassword(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user && !showNewPassword) {
       navigate("/");
     }
-  }, [user, navigate]);
+  }, [user, navigate, showNewPassword]);
   useEffect(() => {
     supabase.from("restaurants").select("id, name").order("name").then(({
       data,
@@ -176,6 +188,27 @@ const Auth = () => {
       setLoading(false);
     }
   };
+
+  const handleSetNewPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      toast.success("Password updated successfully!");
+      setShowNewPassword(false);
+      setNewPassword("");
+      navigate("/");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update password");
+    } finally {
+      setLoading(false);
+    }
+  };
   const renderSignInForm = () => <form onSubmit={handleSignIn} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="signin-email">Email</Label>
@@ -307,11 +340,19 @@ const Auth = () => {
               <UtensilsCrossed className="h-8 w-8 text-primary-foreground" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold">{getTitle()}</CardTitle>
-          <CardDescription>{getDescription()}</CardDescription>
+          <CardTitle className="text-2xl font-bold">{showNewPassword ? "Set New Password" : getTitle()}</CardTitle>
+          <CardDescription>{showNewPassword ? "Enter your new password below" : getDescription()}</CardDescription>
         </CardHeader>
         <CardContent>
-          {showResetPassword ? <div className="space-y-4">
+          {showNewPassword ? <form onSubmit={handleSetNewPassword} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="new-password">New Password</Label>
+                <Input id="new-password" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value.slice(0, 128))} required minLength={6} maxLength={128} placeholder="At least 6 characters" />
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Updating..." : "Update Password"}
+              </Button>
+            </form> : showResetPassword ? <div className="space-y-4">
               <div className="text-center">
                 <h3 className="text-lg font-semibold mb-2">Reset Password</h3>
                 <p className="text-sm text-muted-foreground mb-4">
