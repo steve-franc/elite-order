@@ -114,6 +114,14 @@ const App = () => (
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/report/:id"
+            element={
+              <ProtectedRoute>
+                <ReportBreakdown />
+              </ProtectedRoute>
+            }
+          />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
