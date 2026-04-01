@@ -142,6 +142,7 @@ const CreateOrder = () => {
     setNotes("");
     setDrawerOpen(false);
     setAmountGiven("");
+    sessionStorage.removeItem('pendingOrder');
   };
   const calculateItemTotal = (item: OrderItem) => {
     const baseTotal = item.menuItem.base_price * item.quantity;
