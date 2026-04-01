@@ -10,6 +10,7 @@ import ScrollToTop from "./components/ScrollToTop";
 
 // Lazy-load all pages for faster initial load
 const Auth = lazy(() => import("./pages/Auth"));
+const Landing = lazy(() => import("./pages/Landing"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const MenuManagement = lazy(() => import("./pages/MenuManagement"));
 const CreateOrder = lazy(() => import("./pages/CreateOrder"));
@@ -51,6 +52,24 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+const PublicOnlyRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    );
+  }
+
+  if (user) {
+    return <Navigate to="/order/create" replace />;
+  }
+
+  return <>{children}</>;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <RestaurantRoleProvider>
@@ -62,9 +81,10 @@ const App = () => (
           <NotificationSound />
           <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><p className="text-muted-foreground">Loading...</p></div>}>
             <Routes>
-              <Route path="/auth" element={<Auth />} />
+              <Route path="/" element={<PublicOnlyRoute><Landing /></PublicOnlyRoute>} />
+              <Route path="/auth" element={<PublicOnlyRoute><Auth /></PublicOnlyRoute>} />
               <Route path="/order" element={<PublicOrder />} />
-              <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/menu" element={<ProtectedRoute><MenuManagement /></ProtectedRoute>} />
               <Route path="/order/create" element={<ProtectedRoute><CreateOrder /></ProtectedRoute>} />
               <Route path="/orders" element={<ProtectedRoute><OrderHistory /></ProtectedRoute>} />

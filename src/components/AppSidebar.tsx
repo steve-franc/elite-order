@@ -47,7 +47,7 @@ export function AppSidebar() {
       toast.error("Failed to sign out");
     } else {
       toast.success("Signed out successfully");
-      navigate("/auth");
+      navigate("/");
     }
   };
 

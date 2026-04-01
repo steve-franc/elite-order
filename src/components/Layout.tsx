@@ -13,7 +13,7 @@ const Layout = ({ children }: LayoutProps) => {
   const location = useLocation();
 
   const showSidebar =
-    hasRole && !["/auth", "/"].includes(location.pathname) && !location.pathname.startsWith("/receipt/");
+    hasRole && !["/auth", "/", "/order"].includes(location.pathname) && !location.pathname.startsWith("/receipt/");
 
   if (!showSidebar) {
     return (

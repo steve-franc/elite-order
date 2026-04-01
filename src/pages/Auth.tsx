@@ -44,7 +44,7 @@ const Auth = () => {
 
   useEffect(() => {
     if (user && !showNewPassword) {
-      navigate("/");
+      navigate("/order/create");
     }
   }, [user, navigate, showNewPassword]);
   useEffect(() => {
@@ -79,7 +79,7 @@ const Auth = () => {
       });
       if (error) throw error;
       toast.success("Signed in successfully!");
-      navigate("/");
+      navigate("/order/create");
     } catch (error: any) {
       toast.error(error.message || "Failed to sign in");
     } finally {
@@ -202,7 +202,7 @@ const Auth = () => {
       toast.success("Password updated successfully!");
       setShowNewPassword(false);
       setNewPassword("");
-      navigate("/");
+      navigate("/order/create");
     } catch (error: any) {
       toast.error(error.message || "Failed to update password");
     } finally {
