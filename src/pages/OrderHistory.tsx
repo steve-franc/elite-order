@@ -98,20 +98,11 @@ const OrderHistory = () => {
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Get the user's restaurant
-      const { data: membership } = await supabase
-        .from("restaurant_memberships")
-        .select("restaurant_id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (!membership?.restaurant_id) {
+      if (!restaurantId) {
         toast.error("No restaurant found");
         setGeneratingReport(false);
         return;
       }
-
-      const restaurantId = membership.restaurant_id;
 
       // Get the most recent daily report to find last end day using created_at timestamp
       const {
