@@ -219,8 +219,18 @@ const CreateOrder = () => {
       setLoading(false);
     }
   };
-  // Group by category
-  const groupedByCategory = menuItems.reduce((acc, item) => {
+  // Filter by search then group by category
+  const filteredItems = useMemo(() => {
+    if (!searchQuery.trim()) return menuItems;
+    const q = searchQuery.toLowerCase();
+    return menuItems.filter(item =>
+      item.name.toLowerCase().includes(q) ||
+      (item.category && item.category.toLowerCase().includes(q)) ||
+      (item.description && item.description.toLowerCase().includes(q))
+    );
+  }, [menuItems, searchQuery]);
+
+  const groupedByCategory = filteredItems.reduce((acc, item) => {
     const category = item.category || "Uncategorized";
     if (!acc[category]) {
       acc[category] = [];
@@ -228,6 +238,9 @@ const CreateOrder = () => {
     acc[category].push(item);
     return acc;
   }, {} as Record<string, MenuItem[]>);
+
+  // Auto-expand all categories when searching
+  const isSearching = searchQuery.trim().length > 0;
 
   const toggleCategory = (category: string) => {
     const newExpanded = new Set(expandedCategories);
