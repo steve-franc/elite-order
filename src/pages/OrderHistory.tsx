@@ -571,7 +571,7 @@ const OrderHistory = () => {
                     
                     return (
                       <div key={report.id} className="space-y-3">
-                        <div className="flex items-center gap-3 bg-muted/50 p-3 rounded-lg">
+                        <div className="flex items-center gap-3 bg-muted/50 p-3 rounded-lg cursor-pointer hover:bg-muted transition-colors" onClick={() => handleViewReport(report)}>
                           <Clock className="h-5 w-5 text-muted-foreground" />
                           <div className="flex-1">
                             <p className="font-semibold">
@@ -580,6 +580,7 @@ const OrderHistory = () => {
                             <p className="text-sm text-muted-foreground">
                               {report.total_orders} orders • {formatPrice(report.total_revenue)} total
                             </p>
+                            <p className="text-xs text-primary mt-1">Tap to view breakdown →</p>
                           </div>
                           <Badge variant="secondary">{periodOrders.length} orders</Badge>
                         </div>
