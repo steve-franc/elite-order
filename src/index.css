@@ -167,10 +167,13 @@ All colors MUST be HSL.
     visibility: hidden;
   }
   #eod-print,
-  #eod-print * {
+  #eod-print *,
+  #report-print,
+  #report-print * {
     visibility: visible;
   }
-  #eod-print {
+  #eod-print,
+  #report-print {
     position: absolute;
     inset: 0;
     height: auto !important;
