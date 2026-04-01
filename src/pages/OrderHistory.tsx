@@ -61,9 +61,6 @@ const OrderHistory = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<string | null>(null);
   const [lastEndDayDate, setLastEndDayDate] = useState<string | null>(null);
-  const [viewingReport, setViewingReport] = useState<DailyReportInfo | null>(null);
-  const [viewingReportData, setViewingReportData] = useState<DailyReport | null>(null);
-  const [loadingReportData, setLoadingReportData] = useState(false);
   
   useEffect(() => {
     fetchOrders();
