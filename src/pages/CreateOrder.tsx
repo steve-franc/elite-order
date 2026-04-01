@@ -44,7 +44,8 @@ const CreateOrder = () => {
     restaurantName,
     loading: restaurantLoading
   } = useRestaurantContext();
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const { data: menuItemsData = [] } = useMenuItems(true);
+  const menuItems = menuItemsData as MenuItem[];
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [paymentMethod, setPaymentMethod] = useState<string>("Cash");
   const [notes, setNotes] = useState("");
@@ -53,29 +54,6 @@ const CreateOrder = () => {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [amountGiven, setAmountGiven] = useState("");
-  useEffect(() => {
-    if (restaurantLoading) return;
-    if (!restaurantId) return;
-    fetchMenuItems(restaurantId);
-  }, [restaurantLoading, restaurantId]);
-
-  // No need to fetch settings – currency is always TRY
-
-  const fetchMenuItems = async (rid: string) => {
-    const {
-      data,
-      error
-    } = await supabase.from("menu_items").select("*")
-      .eq("is_available", true)
-      .eq("restaurant_id", rid)
-      .order("category", { ascending: true })
-      .order("name", { ascending: true });
-    if (error) {
-      toast.error("Failed to load menu");
-      return;
-    }
-    setMenuItems(data || []);
-  };
   const addToOrder = (menuItem: MenuItem) => {
     // Validate currency matches restaurant currency
     if (menuItem.currency !== currency) {
