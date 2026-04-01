@@ -32,9 +32,12 @@ interface MenuItem {
   stock_qty: number;
 }
 const MenuManagement = () => {
-  const { restaurantId, loading: restaurantLoading } = useRestaurantContext();
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { restaurantId } = useRestaurantContext();
+  const { data: menuItemsData = [], isLoading: loading } = useMenuItems();
+  const menuItems = menuItemsData as MenuItem[];
+  const invalidateMenu = useInvalidateMenuItems();
+  const { data: settings } = useRestaurantSettings();
+  const [saving, setSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -50,12 +53,6 @@ const MenuManagement = () => {
     is_inventory_item: false,
     stock_qty: ""
   });
-  useEffect(() => {
-    if (restaurantLoading) return;
-    if (!restaurantId) return;
-    fetchMenuItems(restaurantId);
-    fetchSettings(restaurantId);
-  }, [restaurantLoading, restaurantId]);
 
   const fetchSettings = async (rid: string) => {
     const {
