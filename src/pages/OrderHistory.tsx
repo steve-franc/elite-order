@@ -357,7 +357,7 @@ const OrderHistory = () => {
             </CardContent>
           </Card>}
 
-        {!loading && (recentOrders.length > 0 || archivedOrders.length > 0) && <Tabs defaultValue="recent" className="space-y-4">
+        {!loading && (recentOrders.length > 0 || archivedOrders.length > 0 || dailyReports.length > 0) && <Tabs defaultValue="recent" className="space-y-4">
             <TabsList>
               <TabsTrigger value="recent" className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
