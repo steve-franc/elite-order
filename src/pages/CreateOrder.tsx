@@ -403,8 +403,19 @@ const CreateOrder = () => {
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Menu Items - Grouped by Category */}
           <div className="lg:col-span-2 space-y-4 pb-20 md:pb-0">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search menu items..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+
             {Object.entries(groupedByCategory).map(([category, items]) => {
-              const isExpanded = expandedCategories.has(category);
+              const isExpanded = isSearching || expandedCategories.has(category);
               return (
                 <Card key={category}>
                   <Collapsible open={isExpanded} onOpenChange={() => toggleCategory(category)}>
@@ -424,7 +435,7 @@ const CreateOrder = () => {
                     
                     <CollapsibleContent>
                       <CardContent className="pt-0">
-                        <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
                           {items.map(item => (
                             <Card key={item.id} className="cursor-pointer hover:shadow-md transition-shadow border-2" onClick={() => addToOrder(item)}>
                               <CardHeader className="pb-3">
@@ -453,10 +464,12 @@ const CreateOrder = () => {
               );
             })}
 
-            {menuItems.length === 0 && (
+            {filteredItems.length === 0 && (
               <Card>
                 <CardContent className="py-12 text-center">
-                  <p className="text-muted-foreground">No menu items available</p>
+                  <p className="text-muted-foreground">
+                    {searchQuery ? "No items match your search" : "No menu items available"}
+                  </p>
                 </CardContent>
               </Card>
             )}
