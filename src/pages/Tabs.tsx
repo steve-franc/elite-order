@@ -683,7 +683,7 @@ const TabsPage = () => {
         restaurantId={restaurantId!}
         onBack={() => {
           setSelectedTab(null);
-          fetchTabs();
+          invalidateTabs();
         }}
         onClosed={() => {
           setSelectedTab(null);
