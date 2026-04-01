@@ -58,7 +58,7 @@ const MenuManagement = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setSaving(true);
     try {
       const {
         data: {
