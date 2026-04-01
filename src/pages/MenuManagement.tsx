@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import Layout from "@/components/Layout";
@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { formatPrice } from "@/lib/currency";
 import { useRestaurantContext } from "@/hooks/useRestaurantContext";
+import { useMenuItems, useInvalidateMenuItems, useRestaurantSettings } from "@/hooks/useQueries";
 import { menuItemSchema, validateInput } from "@/lib/validations";
 
 interface MenuItem {
@@ -31,9 +32,12 @@ interface MenuItem {
   stock_qty: number;
 }
 const MenuManagement = () => {
-  const { restaurantId, loading: restaurantLoading } = useRestaurantContext();
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { restaurantId } = useRestaurantContext();
+  const { data: menuItemsData = [], isLoading: loading } = useMenuItems();
+  const menuItems = menuItemsData as MenuItem[];
+  const invalidateMenu = useInvalidateMenuItems();
+  const { data: settings } = useRestaurantSettings();
+  const [saving, setSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -49,48 +53,12 @@ const MenuManagement = () => {
     is_inventory_item: false,
     stock_qty: ""
   });
-  useEffect(() => {
-    if (restaurantLoading) return;
-    if (!restaurantId) return;
-    fetchMenuItems(restaurantId);
-    fetchSettings(restaurantId);
-  }, [restaurantLoading, restaurantId]);
 
-  const fetchSettings = async (rid: string) => {
-    const {
-      data
-    } = await supabase.from("restaurant_settings").select("currency").eq("restaurant_id", rid).maybeSingle();
-    if (data) {
-      setFormData(prev => ({
-        ...prev,
-        currency: data.currency
-      }));
-    }
-  };
 
-  const fetchMenuItems = async (rid: string) => {
-    try {
-      const {
-        data,
-        error
-      } = await supabase
-        .from("menu_items")
-        .select("*")
-        .eq("restaurant_id", rid)
-        .order("category", { ascending: true })
-        .order("name", { ascending: true });
-      
-      if (error) throw error;
-      setMenuItems(data || []);
-    } catch (error: any) {
-      toast.error("Failed to load menu items");
-    } finally {
-      setLoading(false);
-    }
-  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setSaving(true);
     try {
       const {
         data: {
@@ -105,13 +73,13 @@ const MenuManagement = () => {
       
       if (isNaN(basePrice) || basePrice <= 0) {
         toast.error("Base price must be a positive number");
-        setLoading(false);
+        setSaving(false);
         return;
       }
       
       if (perUnitPrice !== null && (isNaN(perUnitPrice) || perUnitPrice <= 0)) {
         toast.error("Per unit price must be a positive number");
-        setLoading(false);
+        setSaving(false);
         return;
       }
       
@@ -127,7 +95,7 @@ const MenuManagement = () => {
       
       if (!validation.success) {
         toast.error(validation.error);
-        setLoading(false);
+        setSaving(false);
         return;
       }
       
@@ -162,11 +130,11 @@ const MenuManagement = () => {
       }
       setDialogOpen(false);
       resetForm();
-      if (restaurantId) fetchMenuItems(restaurantId);
+      invalidateMenu();
     } catch (error: any) {
       toast.error(error.message || "Failed to save menu item");
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
   const handleDelete = async (id: string) => {
@@ -177,7 +145,7 @@ const MenuManagement = () => {
       } = await supabase.from("menu_items").delete().eq("id", id);
       if (error) throw error;
       toast.success("Item deleted");
-      if (restaurantId) fetchMenuItems(restaurantId);
+      invalidateMenu();
     } catch (error: any) {
       toast.error("Failed to delete item");
     }
@@ -191,7 +159,7 @@ const MenuManagement = () => {
         .eq("id", item.id);
       if (error) throw error;
       toast.success(`${item.name} is now ${!item.is_available ? 'available' : 'unavailable'}`);
-      if (restaurantId) fetchMenuItems(restaurantId);
+      invalidateMenu();
     } catch (error: any) {
       toast.error("Failed to update availability");
     }
@@ -423,8 +391,8 @@ const MenuManagement = () => {
                   />
                 </div>
                 <div className="flex gap-2">
-                  <Button type="submit" disabled={loading} className="flex-1">
-                    {loading ? "Saving..." : editingItem ? "Update" : "Add"} Item
+                  <Button type="submit" disabled={saving} className="flex-1">
+                    {saving ? "Saving..." : editingItem ? "Update" : "Add"} Item
                   </Button>
                   <Button type="button" variant="outline" onClick={() => {
                   setDialogOpen(false);

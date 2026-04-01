@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { formatPrice } from "@/lib/currency";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useRestaurantContext } from "@/hooks/useRestaurantContext";
+import { useExpenses, useInvalidateExpenses } from "@/hooks/useQueries";
 
 interface Expense {
   id: string;
@@ -35,8 +36,8 @@ interface ExpenseManagerProps {
 
 const ExpenseManager = ({ onExpensesChange }: ExpenseManagerProps) => {
   const { restaurantId } = useRestaurantContext();
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: expenses = [], isLoading: loading } = useExpenses();
+  const invalidate = useInvalidateExpenses();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     description: "",
@@ -44,46 +45,12 @@ const ExpenseManager = ({ onExpensesChange }: ExpenseManagerProps) => {
     category: ""
   });
 
-  useEffect(() => {
-    if (restaurantId) {
-      fetchExpenses();
-    }
-  }, [restaurantId]);
-
-  const fetchExpenses = async () => {
-    if (!restaurantId) return;
-    
-    try {
-      // Get last daily report to find cutoff using created_at timestamp
-      const { data: lastReport } = await supabase
-        .from("daily_reports")
-        .select("created_at")
-        .eq("restaurant_id", restaurantId)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      
-      // Use the exact timestamp of the last report as cutoff
-      const cutoffDate = lastReport ? new Date(lastReport.created_at) : new Date(0);
-
-      const { data, error } = await supabase
-        .from("daily_expenses")
-        .select("*")
-        .eq("restaurant_id", restaurantId)
-        .gte("created_at", cutoffDate.toISOString())
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      setExpenses(data || []);
-      
-      const total = (data || []).reduce((sum, exp) => sum + Number(exp.amount), 0);
-      onExpensesChange?.(total);
-    } catch (error: any) {
-      toast.error("Failed to load expenses");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Notify parent of total
+  const totalExpenses = expenses.reduce((sum: number, exp: any) => sum + Number(exp.amount), 0);
+  if (onExpensesChange) {
+    // Use a microtask to avoid calling during render
+    Promise.resolve().then(() => onExpensesChange(totalExpenses));
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,7 +88,7 @@ const ExpenseManager = ({ onExpensesChange }: ExpenseManagerProps) => {
       toast.success("Expense added");
       setDialogOpen(false);
       setFormData({ description: "", amount: "", category: "" });
-      fetchExpenses();
+      invalidate();
     } catch (error: any) {
       toast.error(error.message || "Failed to add expense");
     }
@@ -136,13 +103,11 @@ const ExpenseManager = ({ onExpensesChange }: ExpenseManagerProps) => {
 
       if (error) throw error;
       toast.success("Expense deleted");
-      fetchExpenses();
+      invalidate();
     } catch (error: any) {
       toast.error("Failed to delete expense");
     }
   };
-
-  const totalExpenses = expenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
 
   return (
     <Card>
@@ -223,7 +188,7 @@ const ExpenseManager = ({ onExpensesChange }: ExpenseManagerProps) => {
       {expenses.length > 0 && (
         <CardContent className="pt-0">
           <div className="space-y-2 max-h-48 overflow-y-auto">
-            {expenses.map((expense) => (
+            {(expenses as Expense[]).map((expense) => (
               <div key={expense.id} className="flex items-center justify-between p-2 bg-muted/50 rounded">
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{expense.description}</p>
