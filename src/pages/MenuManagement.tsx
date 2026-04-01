@@ -73,7 +73,7 @@ const MenuManagement = () => {
       
       if (isNaN(basePrice) || basePrice <= 0) {
         toast.error("Base price must be a positive number");
-        setLoading(false);
+        setSaving(false);
         return;
       }
       
