@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { Plus, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useRestaurantContext } from "@/hooks/useRestaurantContext";
+import { useInventory, useInvalidateInventory } from "@/hooks/useQueries";
 
 type InventoryStatus = "available" | "almost_finished" | "finished";
 
@@ -40,11 +41,12 @@ const statusColors: Record<InventoryStatus, "default" | "secondary" | "destructi
 };
 
 const Inventory = () => {
-  const { restaurantId, loading: restaurantLoading } = useRestaurantContext();
-  const [items, setItems] = useState<InventoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { restaurantId } = useRestaurantContext();
+  const { data: items = [], isLoading: loading } = useInventory();
+  const invalidate = useInvalidateInventory();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
+  const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -53,32 +55,9 @@ const Inventory = () => {
     status: "available" as InventoryStatus,
   });
 
-  useEffect(() => {
-    if (restaurantLoading) return;
-    if (!restaurantId) return;
-    fetchInventory(restaurantId);
-  }, [restaurantLoading, restaurantId]);
-
-  const fetchInventory = async (rid: string) => {
-    try {
-      const { data, error } = await supabase
-        .from("inventory")
-        .select("*")
-        .eq("restaurant_id", rid)
-        .order("name");
-
-      if (error) throw error;
-      setItems(data || []);
-    } catch (error: any) {
-      toast.error("Failed to load inventory");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setSaving(true);
 
     try {
       if (!restaurantId) throw new Error("Restaurant not selected");
@@ -94,7 +73,7 @@ const Inventory = () => {
 
       if (!itemData.name) {
         toast.error("Name is required");
-        setLoading(false);
+        setSaving(false);
         return;
       }
 
@@ -113,11 +92,11 @@ const Inventory = () => {
 
       setDialogOpen(false);
       resetForm();
-      if (restaurantId) fetchInventory(restaurantId);
+      invalidate();
     } catch (error: any) {
       toast.error(error.message || "Failed to save inventory item");
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
@@ -127,7 +106,7 @@ const Inventory = () => {
       const { error } = await supabase.from("inventory").delete().eq("id", id);
       if (error) throw error;
       toast.success("Item deleted");
-      if (restaurantId) fetchInventory(restaurantId);
+      invalidate();
     } catch (error: any) {
       toast.error("Failed to delete item");
     }
@@ -239,8 +218,8 @@ const Inventory = () => {
                   />
                 </div>
                 <div className="flex gap-2">
-                  <Button type="submit" disabled={loading} className="flex-1">
-                    {loading ? "Saving..." : editingItem ? "Update" : "Add"} Item
+                  <Button type="submit" disabled={saving} className="flex-1">
+                    {saving ? "Saving..." : editingItem ? "Update" : "Add"} Item
                   </Button>
                   <Button type="button" variant="outline" onClick={() => {
                     setDialogOpen(false);
@@ -270,7 +249,7 @@ const Inventory = () => {
 
         {!loading && items.length > 0 && (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {items.map((item) => (
+            {(items as InventoryItem[]).map((item) => (
               <Card key={item.id} className="hover:shadow-md transition-shadow">
                 <CardHeader>
                   <div className="flex items-start justify-between">
