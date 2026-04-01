@@ -95,7 +95,7 @@ const MenuManagement = () => {
       
       if (!validation.success) {
         toast.error(validation.error);
-        setLoading(false);
+        setSaving(false);
         return;
       }
       
