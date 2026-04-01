@@ -59,84 +59,23 @@ const App = () => (
       <BrowserRouter>
         <ScrollToTop />
         <NotificationSound />
-        <Routes>
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/order" element={<PublicOrder />} />
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/menu"
-            element={
-              <ProtectedRoute>
-                <MenuManagement />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/order/create"
-            element={
-              <ProtectedRoute>
-                <CreateOrder />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/orders"
-            element={
-              <ProtectedRoute>
-                <OrderHistory />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/receipt/:id"
-            element={
-              <ProtectedRoute>
-                <Receipt />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute>
-                <Admin />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/inventory"
-            element={
-              <ProtectedRoute>
-                <Inventory />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/tabs"
-            element={
-              <ProtectedRoute>
-                <TabsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/report/:id"
-            element={
-              <ProtectedRoute>
-                <ReportBreakdown />
-              </ProtectedRoute>
-            }
-          />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><p className="text-muted-foreground">Loading...</p></div>}>
+          <Routes>
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/order" element={<PublicOrder />} />
+            <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/menu" element={<ProtectedRoute><MenuManagement /></ProtectedRoute>} />
+            <Route path="/order/create" element={<ProtectedRoute><CreateOrder /></ProtectedRoute>} />
+            <Route path="/orders" element={<ProtectedRoute><OrderHistory /></ProtectedRoute>} />
+            <Route path="/receipt/:id" element={<ProtectedRoute><Receipt /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+            <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
+            <Route path="/tabs" element={<ProtectedRoute><TabsPage /></ProtectedRoute>} />
+            <Route path="/report/:id" element={<ProtectedRoute><ReportBreakdown /></ProtectedRoute>} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
