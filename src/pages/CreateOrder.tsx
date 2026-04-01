@@ -74,6 +74,7 @@ const CreateOrder = () => {
   const [loading, setLoading] = useState(false);
   const [currency] = useState("TRY");
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [amountGiven, setAmountGiven] = useState("");
 
