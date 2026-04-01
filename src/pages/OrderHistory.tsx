@@ -386,7 +386,7 @@ const OrderHistory = () => {
             </TabsContent>
 
             <TabsContent value="archived" className="space-y-4">
-              {archivedOrders.length === 0 ? <Card>
+              {archivedOrders.length === 0 && dailyReports.length === 0 ? <Card>
                   <CardContent className="py-12 text-center">
                     <p className="text-muted-foreground">No archived orders</p>
                   </CardContent>
