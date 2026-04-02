@@ -34,6 +34,7 @@ interface OrderItem {
 
 const PublicOrder = () => {
   const navigate = useNavigate();
+  const { restaurantId: urlRestaurantId } = useParams<{ restaurantId: string }>();
   const isMobile = useIsMobile();
   const haptics = useHaptics();
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -47,11 +48,18 @@ const PublicOrder = () => {
   const [loading, setLoading] = useState(false);
   const [restaurantName, setRestaurantName] = useState("Restaurant");
   const [currency, setCurrency] = useState("USD");
-  const [restaurantId, setRestaurantId] = useState<string | null>(null);
+  const [restaurantId, setRestaurantId] = useState<string | null>(urlRestaurantId || null);
+  const [publicOrdersDisabled, setPublicOrdersDisabled] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
 
   useEffect(() => {
+    if (!urlRestaurantId) {
+      setPageLoading(false);
+      return;
+    }
     fetchSettings();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlRestaurantId]);
 
   useEffect(() => {
     if (!restaurantId) return;
@@ -62,14 +70,29 @@ const PublicOrder = () => {
   const fetchSettings = async () => {
     const { data } = await supabase
       .from("restaurant_settings")
-      .select("restaurant_id, restaurant_name, currency")
+      .select("restaurant_id, restaurant_name, currency, allow_public_orders")
+      .eq("restaurant_id", urlRestaurantId!)
       .maybeSingle();
-    
+
     if (data) {
       setRestaurantName(data.restaurant_name);
       setCurrency(data.currency);
       setRestaurantId(data.restaurant_id ?? null);
+      if (!data.allow_public_orders) {
+        setPublicOrdersDisabled(true);
+      }
+    } else {
+      // Try to get restaurant name directly
+      const { data: restaurant } = await supabase
+        .from("restaurants")
+        .select("name")
+        .eq("id", urlRestaurantId!)
+        .maybeSingle();
+      if (restaurant) {
+        setRestaurantName(restaurant.name);
+      }
     }
+    setPageLoading(false);
   };
 
   const fetchMenuItems = async () => {
