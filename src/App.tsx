@@ -83,12 +83,12 @@ const App = () => (
             <Routes>
               <Route path="/" element={<PublicOnlyRoute><Landing /></PublicOnlyRoute>} />
               <Route path="/auth" element={<PublicOnlyRoute><Auth /></PublicOnlyRoute>} />
-              <Route path="/order" element={<PublicOrder />} />
+              <Route path="/order/:restaurantId" element={<PublicOrder />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/menu" element={<ProtectedRoute><MenuManagement /></ProtectedRoute>} />
               <Route path="/order/create" element={<ProtectedRoute><CreateOrder /></ProtectedRoute>} />
               <Route path="/orders" element={<ProtectedRoute><OrderHistory /></ProtectedRoute>} />
-              <Route path="/receipt/:id" element={<ProtectedRoute><Receipt /></ProtectedRoute>} />
+              <Route path="/receipt/:id" element={<Receipt />} />
               <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
               <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
               <Route path="/tabs" element={<ProtectedRoute><TabsPage /></ProtectedRoute>} />

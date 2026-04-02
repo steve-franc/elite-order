@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +34,7 @@ interface OrderItem {
 
 const PublicOrder = () => {
   const navigate = useNavigate();
+  const { restaurantId: urlRestaurantId } = useParams<{ restaurantId: string }>();
   const isMobile = useIsMobile();
   const haptics = useHaptics();
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -47,11 +48,18 @@ const PublicOrder = () => {
   const [loading, setLoading] = useState(false);
   const [restaurantName, setRestaurantName] = useState("Restaurant");
   const [currency, setCurrency] = useState("USD");
-  const [restaurantId, setRestaurantId] = useState<string | null>(null);
+  const [restaurantId, setRestaurantId] = useState<string | null>(urlRestaurantId || null);
+  const [publicOrdersDisabled, setPublicOrdersDisabled] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
 
   useEffect(() => {
+    if (!urlRestaurantId) {
+      setPageLoading(false);
+      return;
+    }
     fetchSettings();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlRestaurantId]);
 
   useEffect(() => {
     if (!restaurantId) return;
@@ -62,14 +70,29 @@ const PublicOrder = () => {
   const fetchSettings = async () => {
     const { data } = await supabase
       .from("restaurant_settings")
-      .select("restaurant_id, restaurant_name, currency")
+      .select("restaurant_id, restaurant_name, currency, allow_public_orders")
+      .eq("restaurant_id", urlRestaurantId!)
       .maybeSingle();
-    
+
     if (data) {
       setRestaurantName(data.restaurant_name);
       setCurrency(data.currency);
       setRestaurantId(data.restaurant_id ?? null);
+      if (!data.allow_public_orders) {
+        setPublicOrdersDisabled(true);
+      }
+    } else {
+      // Try to get restaurant name directly
+      const { data: restaurant } = await supabase
+        .from("restaurants")
+        .select("name")
+        .eq("id", urlRestaurantId!)
+        .maybeSingle();
+      if (restaurant) {
+        setRestaurantName(restaurant.name);
+      }
     }
+    setPageLoading(false);
   };
 
   const fetchMenuItems = async () => {
@@ -266,6 +289,40 @@ const PublicOrder = () => {
     acc[category].push(item);
     return acc;
   }, {} as Record<string, MenuItem[]>);
+
+  if (pageLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <p className="text-muted-foreground">Loading menu...</p>
+      </div>
+    );
+  }
+
+  if (!urlRestaurantId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Card className="max-w-md">
+          <CardContent className="py-12 text-center">
+            <p className="text-muted-foreground">Invalid ordering link. Please ask the restaurant for their ordering URL.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (publicOrdersDisabled) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Card className="max-w-md">
+          <CardContent className="py-12 text-center space-y-2">
+            <UtensilsCrossed className="h-10 w-10 mx-auto text-muted-foreground" />
+            <h2 className="text-xl font-semibold">{restaurantName}</h2>
+            <p className="text-muted-foreground">Online ordering is currently unavailable for this restaurant.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

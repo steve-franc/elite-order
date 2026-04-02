@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Shield, Users, ShoppingBag, TrendingUp, Calendar, AlertCircle, UserMinus, Target, Save } from "lucide-react";
+import { Shield, Users, ShoppingBag, TrendingUp, Calendar, AlertCircle, UserMinus, Target, Save, Link2, Copy, Check } from "lucide-react";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
 import { formatPrice } from "@/lib/currency";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -462,6 +462,42 @@ const Admin = () => {
             </CardContent>
           )}
         </Card>
+
+        {/* Public Ordering Link */}
+        {restaurantId && (
+          <Card className="border-accent/20">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <Link2 className="h-5 w-5 text-accent-foreground" />
+                <CardTitle className="text-lg">Public Ordering Link</CardTitle>
+              </div>
+              <CardDescription>
+                Share this link with customers so they can order directly from your menu — no sign-in required.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-2">
+                <Input
+                  readOnly
+                  value={`${window.location.origin}/order/${restaurantId}`}
+                  className="font-mono text-sm"
+                  onClick={(e) => (e.target as HTMLInputElement).select()}
+                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="shrink-0"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}/order/${restaurantId}`);
+                    toast.success("Link copied to clipboard!");
+                  }}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Tabs defaultValue="staff" className="space-y-4">
           <TabsList>
