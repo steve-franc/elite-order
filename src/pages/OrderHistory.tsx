@@ -162,7 +162,7 @@ const OrderHistory = () => {
       const {
         data: ordersData,
         error: ordersError
-      } = await supabase.from("orders").select("*").eq("restaurant_id", restaurantId).gte("created_at", cutoffDate.toISOString()).order("created_at", {
+      } = await supabase.from("orders").select("*").eq("restaurant_id", restaurantId).eq("status", "confirmed").gte("created_at", cutoffDate.toISOString()).order("created_at", {
         ascending: false
       });
       if (ordersError) throw ordersError;
