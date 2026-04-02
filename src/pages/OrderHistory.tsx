@@ -228,43 +228,92 @@ const OrderHistory = () => {
 
 
 
-  const renderOrderCard = (order: Order) => <Card key={order.id} className="hover:shadow-md transition-shadow">
-      <CardHeader>
-        <div className="flex items-start justify-between">
-          <div className="space-y-1 flex-1">
-            <CardTitle className="text-xl flex items-center gap-2">
-              Order #{order.order_number}
-              <Badge variant="outline" className="font-normal">
-                {order.payment_method}
-              </Badge>
-            </CardTitle>
-            <CardDescription className="flex items-center gap-2">
-              <Calendar className="h-3 w-3" />
-              {format(new Date(order.created_at), "PPp")}
-            </CardDescription>
-            {order.notes && <CardDescription className="text-sm mt-2">
-                Note: {order.notes}
-              </CardDescription>}
-          </div>
-          <div className="text-right space-y-2">
-            <p className="text-2xl font-bold text-primary">
-              {formatPrice(order.total)}
-            </p>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => navigate(`/receipt/${order.id}`)}>
-                <Receipt className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => navigate(`/receipt/${order.id}?edit=true`)}>
-                <Edit className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => confirmDelete(order.id)}>
-                <Trash2 className="h-4 w-4" />
-              </Button>
+  const handleUpdateOrderStatus = async (orderId: string, status: 'confirmed' | 'declined') => {
+    try {
+      const { error } = await supabase.from("orders").update({ status }).eq("id", orderId);
+      if (error) throw error;
+      toast.success(`Order ${status === 'confirmed' ? 'confirmed' : 'declined'} successfully`);
+      invalidateOrders();
+    } catch (error: any) {
+      toast.error(`Failed to ${status} order`);
+    }
+  };
+
+  const renderOrderCard = (order: Order) => {
+    const isPending = order.status === 'pending';
+    const isDeclined = order.status === 'declined';
+    const isOnline = order.is_public_order;
+
+    return (
+      <Card key={order.id} className={`hover:shadow-md transition-shadow ${isPending ? 'border-yellow-500/50 bg-yellow-500/5' : ''} ${isDeclined ? 'opacity-60' : ''}`}>
+        <CardHeader>
+          <div className="flex items-start justify-between">
+            <div className="space-y-1 flex-1">
+              <CardTitle className="text-xl flex items-center gap-2 flex-wrap">
+                Order #{order.order_number}
+                <Badge variant="outline" className="font-normal">
+                  {order.payment_method}
+                </Badge>
+                {isOnline && (
+                  <Badge variant="secondary" className="font-normal gap-1">
+                    <Globe className="h-3 w-3" />
+                    Online
+                  </Badge>
+                )}
+                {isPending && (
+                  <Badge className="bg-yellow-500 text-yellow-950 font-medium">Pending</Badge>
+                )}
+                {isDeclined && (
+                  <Badge variant="destructive" className="font-medium">Declined</Badge>
+                )}
+              </CardTitle>
+              <CardDescription className="flex items-center gap-2">
+                <Calendar className="h-3 w-3" />
+                {format(new Date(order.created_at), "PPp")}
+              </CardDescription>
+              {order.customer_name && (
+                <CardDescription className="text-sm">
+                  Customer: {order.customer_name}
+                </CardDescription>
+              )}
+              {order.notes && <CardDescription className="text-sm mt-2">
+                  Note: {order.notes}
+                </CardDescription>}
+            </div>
+            <div className="text-right space-y-2">
+              <p className="text-2xl font-bold text-primary">
+                {formatPrice(order.total)}
+              </p>
+              {isPending ? (
+                <div className="flex gap-2">
+                  <Button size="sm" className="gap-1 bg-green-600 hover:bg-green-700" onClick={() => handleUpdateOrderStatus(order.id, 'confirmed')}>
+                    <CheckCircle className="h-4 w-4" />
+                    Confirm
+                  </Button>
+                  <Button size="sm" variant="destructive" className="gap-1" onClick={() => handleUpdateOrderStatus(order.id, 'declined')}>
+                    <XCircle className="h-4 w-4" />
+                    Decline
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => navigate(`/receipt/${order.id}`)}>
+                    <Receipt className="h-4 w-4" />
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => navigate(`/receipt/${order.id}?edit=true`)}>
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => confirmDelete(order.id)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
-        </div>
-      </CardHeader>
-    </Card>;
+        </CardHeader>
+      </Card>
+    );
+  };
   return <Layout>
       <div className="max-w-5xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
