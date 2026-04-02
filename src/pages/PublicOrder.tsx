@@ -290,6 +290,40 @@ const PublicOrder = () => {
     return acc;
   }, {} as Record<string, MenuItem[]>);
 
+  if (pageLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <p className="text-muted-foreground">Loading menu...</p>
+      </div>
+    );
+  }
+
+  if (!urlRestaurantId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Card className="max-w-md">
+          <CardContent className="py-12 text-center">
+            <p className="text-muted-foreground">Invalid ordering link. Please ask the restaurant for their ordering URL.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (publicOrdersDisabled) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Card className="max-w-md">
+          <CardContent className="py-12 text-center space-y-2">
+            <UtensilsCrossed className="h-10 w-10 mx-auto text-muted-foreground" />
+            <h2 className="text-xl font-semibold">{restaurantName}</h2>
+            <p className="text-muted-foreground">Online ordering is currently unavailable for this restaurant.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
