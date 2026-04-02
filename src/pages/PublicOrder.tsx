@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { Plus, Minus, ShoppingCart, UtensilsCrossed, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { formatPrice, getCurrencySymbol } from "@/lib/currency";
+import { formatPrice } from "@/lib/currency";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useHaptics } from "@/hooks/use-haptics";
 import { publicOrderSchema, validateInput, PAYMENT_METHODS } from "@/lib/validations";
@@ -45,7 +45,7 @@ const PublicOrder = () => {
   const [customerEmail, setCustomerEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [restaurantName, setRestaurantName] = useState("Restaurant");
-  const [currency, setCurrency] = useState("USD");
+  const [currency, setCurrency] = useState("TRY");
   const [restaurantId, setRestaurantId] = useState<string | null>(urlRestaurantId || null);
   const [publicOrdersDisabled, setPublicOrdersDisabled] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
@@ -68,13 +68,13 @@ const PublicOrder = () => {
   const fetchSettings = async () => {
     const { data } = await supabase
       .from("restaurant_settings")
-      .select("restaurant_id, restaurant_name, currency, allow_public_orders")
+      .select("restaurant_id, restaurant_name, allow_public_orders")
       .eq("restaurant_id", urlRestaurantId!)
       .maybeSingle();
 
     if (data) {
       setRestaurantName(data.restaurant_name);
-      setCurrency(data.currency);
+      setCurrency("TRY");
       setRestaurantId(data.restaurant_id ?? null);
       if (!data.allow_public_orders) {
         setPublicOrdersDisabled(true);
