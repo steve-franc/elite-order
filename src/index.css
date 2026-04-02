@@ -103,6 +103,23 @@
 }
 
 @media print {
+  /* Force light mode colors for printing */
+  :root, .dark {
+    --background: 220 20% 97%;
+    --foreground: 220 25% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 25% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 25% 10%;
+    --primary: 230 75% 55%;
+    --primary-foreground: 0 0% 100%;
+    --muted: 220 15% 93%;
+    --muted-foreground: 220 10% 46%;
+    --border: 220 13% 91%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+  }
+
   body * {
     visibility: hidden;
   }
@@ -126,6 +143,8 @@
     max-width: 100% !important;
     padding: 1rem !important;
     margin: 0 !important;
+    background: white !important;
+    color: black !important;
   }
   .print\:hidden {
     display: none !important;
