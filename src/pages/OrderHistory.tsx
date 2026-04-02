@@ -272,11 +272,10 @@ const OrderHistory = () => {
 
   const renderOrderCard = (order: Order) => {
     const isPending = order.status === 'pending';
-    const isDeclined = order.status === 'declined';
     const isOnline = order.is_public_order;
 
     return (
-      <Card key={order.id} className={`hover:shadow-md transition-shadow ${isPending ? 'border-yellow-500/50 bg-yellow-500/5' : ''} ${isDeclined ? 'opacity-60' : ''}`}>
+      <Card key={order.id} className={`hover:shadow-md transition-shadow ${isPending ? 'border-yellow-500/50 bg-yellow-500/5' : ''}`}>
         <CardHeader>
           <div className="flex items-start justify-between">
             <div className="space-y-1 flex-1">
