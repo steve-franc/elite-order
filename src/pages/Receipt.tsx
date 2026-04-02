@@ -71,6 +71,20 @@ const Receipt = () => {
 
   const fetchOrderDetails = async () => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        const { data, error } = await supabase.rpc("get_public_receipt", { _order_id: id! });
+        if (error) throw error;
+        if (!data || typeof data !== "object" || !("order" in data) || !("items" in data)) {
+          throw new Error("Receipt not found");
+        }
+
+        setOrder(data.order as OrderData);
+        setOrderItems((data.items as OrderItemData[]) || []);
+        return;
+      }
+
       const { data: orderData, error: orderError } = await supabase
         .from("orders")
         .select("*")

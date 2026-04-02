@@ -208,51 +208,31 @@ const PublicOrder = () => {
 
     setLoading(true);
     try {
-      const total = calculateTotal();
-
       if (!restaurantId) throw new Error("Restaurant not configured");
 
-      const { data: order, error: orderError } = await supabase
-        .from("orders")
-        .insert([
-          {
-            staff_id: '00000000-0000-0000-0000-000000000000',
-            total,
-            payment_method: paymentMethod,
-            notes: notes || null,
-            customer_name: customerName,
-            customer_email: customerEmail || null,
-            is_public_order: true,
-            currency: currency,
-            restaurant_id: restaurantId,
-            order_number: 0,
-            discount_amount: 0,
-          },
-        ])
-        .select()
-        .single();
+      const payloadItems = orderItems.map((item) => ({
+        menu_item_id: item.menuItem.id,
+        quantity: item.quantity,
+        extra_units: item.extraUnits,
+      }));
+
+      const { data: order, error: orderError } = await supabase.rpc("create_public_order", {
+        _restaurant_id: restaurantId,
+        _customer_name: validatedData.customerName,
+        _customer_email: validatedData.customerEmail || null,
+        _payment_method: validatedData.paymentMethod,
+        _notes: validatedData.notes || null,
+        _items: payloadItems,
+      });
 
       if (orderError) throw orderError;
 
-      const orderItemsData = orderItems.map((item) => ({
-        order_id: order.id,
-        menu_item_id: item.menuItem.id,
-        menu_item_name: item.menuItem.name,
-        quantity: item.quantity,
-        extra_units: item.extraUnits,
-        base_price_at_time: item.menuItem.base_price,
-        per_unit_price_at_time: item.menuItem.per_unit_price,
-        price_at_time: item.menuItem.base_price,
-        subtotal: calculateItemTotal(item),
-      }));
+      const createdOrder = Array.isArray(order) ? order[0] : order;
+      if (!createdOrder?.id) throw new Error("Failed to create order");
 
-      const { error: itemsError } = await supabase.from("order_items").insert(orderItemsData);
-
-      if (itemsError) throw itemsError;
-
-      toast.success(`Order #${order.order_number} placed successfully!`);
+      toast.success(`Order #${createdOrder.order_number} placed successfully!`);
       resetOrderState();
-      navigate(`/receipt/${order.id}`);
+      navigate(`/receipt/${createdOrder.id}`);
     } catch (error: any) {
       toast.error(error.message || "Failed to place order");
     } finally {
