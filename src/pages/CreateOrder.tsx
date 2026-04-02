@@ -164,8 +164,20 @@ const CreateOrder = () => {
     const extraTotal = (item.menuItem.per_unit_price || 0) * item.extraUnits;
     return baseTotal + extraTotal;
   };
-  const calculateTotal = () => {
+  const calculateSubtotal = () => {
     return orderItems.reduce((sum, item) => sum + calculateItemTotal(item), 0);
+  };
+  const calculateDiscountAmount = () => {
+    const subtotal = calculateSubtotal();
+    const val = parseFloat(discountValue);
+    if (!val || val <= 0) return 0;
+    if (discountType === "percentage") {
+      return Math.min(subtotal, subtotal * (Math.min(val, 100) / 100));
+    }
+    return Math.min(subtotal, val);
+  };
+  const calculateTotal = () => {
+    return Math.max(0, calculateSubtotal() - calculateDiscountAmount());
   };
   const handleSubmitOrder = async () => {
     if (orderItems.length === 0) {
