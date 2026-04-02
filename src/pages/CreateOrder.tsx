@@ -71,6 +71,20 @@ const CreateOrder = () => {
     } catch {}
     return "";
   });
+  const [discountType, setDiscountType] = useState<"percentage" | "fixed">(() => {
+    try {
+      const saved = sessionStorage.getItem('pendingOrder');
+      if (saved) return JSON.parse(saved).discountType || "percentage";
+    } catch {}
+    return "percentage";
+  });
+  const [discountValue, setDiscountValue] = useState<string>(() => {
+    try {
+      const saved = sessionStorage.getItem('pendingOrder');
+      if (saved) return JSON.parse(saved).discountValue || "";
+    } catch {}
+    return "";
+  });
   const [loading, setLoading] = useState(false);
   const [currency] = useState("TRY");
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
