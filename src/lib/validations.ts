@@ -32,7 +32,7 @@ export const menuItemSchema = z.object({
   base_price: z.number().positive("Base price must be positive").max(999999.99, "Price too high"),
   per_unit_price: z.number().positive("Per unit price must be positive").max(999999.99, "Price too high").optional().nullable(),
   pricing_unit: z.string().min(1).max(50, "Pricing unit must be less than 50 characters"),
-  currency: z.literal("TRY"),
+  currency: z.string().min(1, "Currency is required").max(10),
 });
 
 // Payment methods
