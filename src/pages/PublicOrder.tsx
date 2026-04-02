@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
-import { Plus, Minus, ShoppingCart, UtensilsCrossed, X, Percent, Tag } from "lucide-react";
+import { Plus, Minus, ShoppingCart, UtensilsCrossed, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { formatPrice, getCurrencySymbol } from "@/lib/currency";
@@ -43,8 +43,6 @@ const PublicOrder = () => {
   const [notes, setNotes] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
-  const [discountType, setDiscountType] = useState<"percentage" | "fixed">("percentage");
-  const [discountValue, setDiscountValue] = useState("");
   const [loading, setLoading] = useState(false);
   const [restaurantName, setRestaurantName] = useState("Restaurant");
   const [currency, setCurrency] = useState("USD");
@@ -175,8 +173,6 @@ const PublicOrder = () => {
     setNotes("");
     setCustomerName("");
     setCustomerEmail("");
-    setDiscountType("percentage");
-    setDiscountValue("");
   };
 
   const calculateItemTotal = (item: OrderItem) => {
@@ -185,22 +181,8 @@ const PublicOrder = () => {
     return baseTotal + extraTotal;
   };
 
-  const calculateSubtotal = () => {
-    return orderItems.reduce((sum, item) => sum + calculateItemTotal(item), 0);
-  };
-
-  const calculateDiscountAmount = () => {
-    const subtotal = calculateSubtotal();
-    const val = parseFloat(discountValue);
-    if (!val || val <= 0) return 0;
-    if (discountType === "percentage") {
-      return Math.min(subtotal, subtotal * (Math.min(val, 100) / 100));
-    }
-    return Math.min(subtotal, val);
-  };
-
   const calculateTotal = () => {
-    return Math.max(0, calculateSubtotal() - calculateDiscountAmount());
+    return orderItems.reduce((sum, item) => sum + calculateItemTotal(item), 0);
   };
 
   const handleSubmitOrder = async () => {
