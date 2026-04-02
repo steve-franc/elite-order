@@ -293,9 +293,6 @@ const OrderHistory = () => {
                 {isPending && (
                   <Badge className="bg-yellow-500 text-yellow-950 font-medium">Pending</Badge>
                 )}
-                {isDeclined && (
-                  <Badge variant="destructive" className="font-medium">Declined</Badge>
-                )}
               </CardTitle>
               <CardDescription className="flex items-center gap-2">
                 <Calendar className="h-3 w-3" />
