@@ -368,7 +368,7 @@ const OrderHistory = () => {
                   <CardTitle className="text-lg">Current Period Revenue</CardTitle>
                 </div>
                 <p className="text-3xl font-bold text-primary">
-                  {formatPrice(recentOrders.reduce((sum, order) => sum + Number(order.total), 0))}
+                  {formatPrice(recentOrders.filter(o => o.status === 'confirmed').reduce((sum, order) => sum + Number(order.total), 0))}
                 </p>
               </div>
               <CardDescription>
