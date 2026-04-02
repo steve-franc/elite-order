@@ -25,6 +25,7 @@ interface OrderData {
   created_at: string;
   currency: string;
   edited_at: string | null;
+  discount_amount: number;
 }
 
 interface OrderItemData {
