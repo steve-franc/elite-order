@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Separator } from "@/components/ui/separator";
 import ExpenseManager from "@/components/expenses/ExpenseManager";
 import { useOrders, useInvalidateOrders } from "@/hooks/useQueries";
+import { stopAlarm } from "@/components/NotificationSound";
 import { useRestaurantContext } from "@/hooks/useRestaurantContext";
 
 interface DailyReportInfo {
@@ -161,7 +162,7 @@ const OrderHistory = () => {
       const {
         data: ordersData,
         error: ordersError
-      } = await supabase.from("orders").select("*").eq("restaurant_id", restaurantId).gte("created_at", cutoffDate.toISOString()).order("created_at", {
+      } = await supabase.from("orders").select("*").eq("restaurant_id", restaurantId).eq("status", "confirmed").gte("created_at", cutoffDate.toISOString()).order("created_at", {
         ascending: false
       });
       if (ordersError) throw ordersError;
@@ -236,24 +237,45 @@ const OrderHistory = () => {
 
 
 
-  const handleUpdateOrderStatus = async (orderId: string, status: 'confirmed' | 'declined') => {
+  const handleConfirmOrder = async (orderId: string) => {
     try {
-      const { error } = await supabase.from("orders").update({ status }).eq("id", orderId);
+      const { error } = await supabase.from("orders").update({ status: 'confirmed' }).eq("id", orderId);
       if (error) throw error;
-      toast.success(`Order ${status === 'confirmed' ? 'confirmed' : 'declined'} successfully`);
+      toast.dismiss(`pending-order-${orderId}`);
+      toast.success("Order confirmed!");
       invalidateOrders();
+      // Check if any pending orders remain
+      const remaining = recentOrders.filter(o => o.status === 'pending' && o.id !== orderId);
+      if (remaining.length === 0) stopAlarm();
     } catch (error: any) {
-      toast.error(`Failed to ${status} order`);
+      toast.error("Failed to confirm order");
+    }
+  };
+
+  const handleDeclineOrder = async (orderId: string) => {
+    try {
+      // Delete order items first, then the order
+      const { error: itemsError } = await supabase.from("order_items").delete().eq("order_id", orderId);
+      if (itemsError) throw itemsError;
+      const { error } = await supabase.from("orders").delete().eq("id", orderId);
+      if (error) throw error;
+      toast.dismiss(`pending-order-${orderId}`);
+      toast.success("Order declined and removed");
+      invalidateOrders();
+      // Check if any pending orders remain
+      const remaining = recentOrders.filter(o => o.status === 'pending' && o.id !== orderId);
+      if (remaining.length === 0) stopAlarm();
+    } catch (error: any) {
+      toast.error("Failed to decline order");
     }
   };
 
   const renderOrderCard = (order: Order) => {
     const isPending = order.status === 'pending';
-    const isDeclined = order.status === 'declined';
     const isOnline = order.is_public_order;
 
     return (
-      <Card key={order.id} className={`hover:shadow-md transition-shadow ${isPending ? 'border-yellow-500/50 bg-yellow-500/5' : ''} ${isDeclined ? 'opacity-60' : ''}`}>
+      <Card key={order.id} className={`hover:shadow-md transition-shadow ${isPending ? 'border-yellow-500/50 bg-yellow-500/5' : ''}`}>
         <CardHeader>
           <div className="flex items-start justify-between">
             <div className="space-y-1 flex-1">
@@ -270,9 +292,6 @@ const OrderHistory = () => {
                 )}
                 {isPending && (
                   <Badge className="bg-yellow-500 text-yellow-950 font-medium">Pending</Badge>
-                )}
-                {isDeclined && (
-                  <Badge variant="destructive" className="font-medium">Declined</Badge>
                 )}
               </CardTitle>
               <CardDescription className="flex items-center gap-2">
@@ -294,11 +313,11 @@ const OrderHistory = () => {
               </p>
               {isPending ? (
                 <div className="flex gap-2">
-                  <Button size="sm" className="gap-1 bg-green-600 hover:bg-green-700" onClick={() => handleUpdateOrderStatus(order.id, 'confirmed')}>
+                  <Button size="sm" className="gap-1 bg-green-600 hover:bg-green-700" onClick={() => handleConfirmOrder(order.id)}>
                     <CheckCircle className="h-4 w-4" />
                     Confirm
                   </Button>
-                  <Button size="sm" variant="destructive" className="gap-1" onClick={() => handleUpdateOrderStatus(order.id, 'declined')}>
+                  <Button size="sm" variant="destructive" className="gap-1" onClick={() => handleDeclineOrder(order.id)}>
                     <XCircle className="h-4 w-4" />
                     Decline
                   </Button>
@@ -345,11 +364,11 @@ const OrderHistory = () => {
                   <CardTitle className="text-lg">Current Period Revenue</CardTitle>
                 </div>
                 <p className="text-3xl font-bold text-primary">
-                  {formatPrice(recentOrders.reduce((sum, order) => sum + Number(order.total), 0))}
+                  {formatPrice(recentOrders.filter(o => o.status === 'confirmed').reduce((sum, order) => sum + Number(order.total), 0))}
                 </p>
               </div>
               <CardDescription>
-                {recentOrders.length} order{recentOrders.length !== 1 ? 's' : ''} since {lastEndDayDate ? format(new Date(lastEndDayDate), "PP p") : "start"}
+                {recentOrders.filter(o => o.status === 'confirmed').length} confirmed order{recentOrders.filter(o => o.status === 'confirmed').length !== 1 ? 's' : ''} since {lastEndDayDate ? format(new Date(lastEndDayDate), "PP p") : "start"}
               </CardDescription>
             </CardHeader>
           </Card>
