@@ -499,6 +499,7 @@ const Admin = () => {
           </Card>
         )}
 
+        <Tabs defaultValue="staff" className="space-y-4">
           <TabsList>
             <TabsTrigger value="staff">Staff Management</TabsTrigger>
             <TabsTrigger value="orders">All Orders</TabsTrigger>
