@@ -80,8 +80,9 @@ const Receipt = () => {
           throw new Error("Receipt not found");
         }
 
-        setOrder(data.order as OrderData);
-        setOrderItems((data.items as OrderItemData[]) || []);
+        const publicReceipt = data as unknown as { order: OrderData; items: OrderItemData[] };
+        setOrder(publicReceipt.order);
+        setOrderItems(publicReceipt.items || []);
         return;
       }
 
