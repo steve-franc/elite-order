@@ -86,51 +86,62 @@ const OrderHistory = () => {
   const [selectedTag, setSelectedTag] = useState<string>("all");
   const [orderItemsMap, setOrderItemsMap] = useState<Record<string, string[]>>({});
 
-  // Fetch order items for tag filtering
-  const fetchOrderItemsForTagFilter = async (orderIds: string[]) => {
-    if (orderIds.length === 0 || selectedTag === "all") return;
-    const { data } = await supabase
-      .from("order_items")
-      .select("order_id, menu_item_id")
-      .in("order_id", orderIds);
-    if (data) {
-      const map: Record<string, string[]> = {};
-      data.forEach((item) => {
-        if (!map[item.order_id]) map[item.order_id] = [];
-        map[item.order_id].push(item.menu_item_id);
-      });
-      setOrderItemsMap(map);
-    }
-  };
+  // Build set of categories for the selected tag
+  const taggedCategories = useMemo(() => {
+    if (selectedTag === "all") return null;
+    const cats = new Set<string>();
+    (menuTags as any[]).forEach(tag => {
+      if (tag.name === selectedTag && tag.category) cats.add(tag.category);
+    });
+    return cats;
+  }, [selectedTag, menuTags]);
 
-  // Build menu item id → tags lookup
-  const menuItemTagsMap = useMemo(() => {
-    const map: Record<string, string[]> = {};
-    (allMenuItems as any[]).forEach((item) => {
-      if (item.tags && item.tags.length > 0) map[item.id] = item.tags;
+  // Build menu item id → category lookup
+  const menuItemCategoryMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    (allMenuItems as any[]).forEach(item => {
+      if (item.category) map[item.id] = item.category;
     });
     return map;
   }, [allMenuItems]);
 
-  // Re-fetch order items when tag changes
+  // Fetch order items when tag is selected
   useMemo(() => {
     if (selectedTag !== "all") {
       const allOrderIds = [...recentOrdersRaw, ...archivedOrders].map(o => o.id);
-      fetchOrderItemsForTagFilter(allOrderIds);
+      if (allOrderIds.length > 0) {
+        supabase
+          .from("order_items")
+          .select("order_id, menu_item_id")
+          .in("order_id", allOrderIds)
+          .then(({ data }) => {
+            if (data) {
+              const map: Record<string, string[]> = {};
+              data.forEach(item => {
+                if (!map[item.order_id]) map[item.order_id] = [];
+                map[item.order_id].push(item.menu_item_id);
+              });
+              setOrderItemsMap(map);
+            }
+          });
+      }
     }
   }, [selectedTag, recentOrdersRaw, archivedOrders]);
 
-  // Filter orders by selected tag
+  // Filter orders by selected tag (via category)
   const filterOrdersByTag = (orders: Order[]) => {
-    if (selectedTag === "all") return orders;
+    if (selectedTag === "all" || !taggedCategories || taggedCategories.size === 0) return orders;
     return orders.filter(order => {
       const itemIds = orderItemsMap[order.id] || [];
-      return itemIds.some(id => menuItemTagsMap[id]?.includes(selectedTag));
+      return itemIds.some(id => {
+        const cat = menuItemCategoryMap[id];
+        return cat && taggedCategories.has(cat);
+      });
     });
   };
 
-  const filteredRecentOrders = useMemo(() => filterOrdersByTag(recentOrders), [recentOrders, selectedTag, orderItemsMap, menuItemTagsMap]);
-  const filteredArchivedOrders = useMemo(() => filterOrdersByTag(archivedOrders), [archivedOrders, selectedTag, orderItemsMap, menuItemTagsMap]);
+  const filteredRecentOrders = useMemo(() => filterOrdersByTag(recentOrders), [recentOrders, selectedTag, orderItemsMap, menuItemCategoryMap, taggedCategories]);
+  const filteredArchivedOrders = useMemo(() => filterOrdersByTag(archivedOrders), [archivedOrders, selectedTag, orderItemsMap, menuItemCategoryMap, taggedCategories]);
 
   // Group daily reports by month or year
   const groupedReports = useMemo(() => {
