@@ -641,6 +641,8 @@ const Admin = () => {
               </CardContent>
             </Card>
           </TabsContent>
+
+          <TabsContent value="orders" className="space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="text-lg font-semibold">All Orders</h3>
               <Select value={dateFilter} onValueChange={setDateFilter}>
