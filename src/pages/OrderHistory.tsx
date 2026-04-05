@@ -15,7 +15,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import ExpenseManager from "@/components/expenses/ExpenseManager";
-import { useOrders, useInvalidateOrders } from "@/hooks/useQueries";
+import { useOrders, useInvalidateOrders, useMenuTags, useMenuItems } from "@/hooks/useQueries";
 import { stopAlarm } from "@/components/NotificationSound";
 import { useRestaurantContext } from "@/hooks/useRestaurantContext";
 
@@ -81,6 +81,56 @@ const OrderHistory = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<string | null>(null);
   const [groupBy, setGroupBy] = useState<"none" | "month" | "year">("none");
+  const { data: menuTags = [] } = useMenuTags();
+  const { data: allMenuItems = [] } = useMenuItems();
+  const [selectedTag, setSelectedTag] = useState<string>("all");
+  const [orderItemsMap, setOrderItemsMap] = useState<Record<string, string[]>>({});
+
+  // Fetch order items for tag filtering
+  const fetchOrderItemsForTagFilter = async (orderIds: string[]) => {
+    if (orderIds.length === 0 || selectedTag === "all") return;
+    const { data } = await supabase
+      .from("order_items")
+      .select("order_id, menu_item_id")
+      .in("order_id", orderIds);
+    if (data) {
+      const map: Record<string, string[]> = {};
+      data.forEach((item) => {
+        if (!map[item.order_id]) map[item.order_id] = [];
+        map[item.order_id].push(item.menu_item_id);
+      });
+      setOrderItemsMap(map);
+    }
+  };
+
+  // Build menu item id → tags lookup
+  const menuItemTagsMap = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    (allMenuItems as any[]).forEach((item) => {
+      if (item.tags && item.tags.length > 0) map[item.id] = item.tags;
+    });
+    return map;
+  }, [allMenuItems]);
+
+  // Re-fetch order items when tag changes
+  useMemo(() => {
+    if (selectedTag !== "all") {
+      const allOrderIds = [...recentOrdersRaw, ...archivedOrders].map(o => o.id);
+      fetchOrderItemsForTagFilter(allOrderIds);
+    }
+  }, [selectedTag, recentOrdersRaw, archivedOrders]);
+
+  // Filter orders by selected tag
+  const filterOrdersByTag = (orders: Order[]) => {
+    if (selectedTag === "all") return orders;
+    return orders.filter(order => {
+      const itemIds = orderItemsMap[order.id] || [];
+      return itemIds.some(id => menuItemTagsMap[id]?.includes(selectedTag));
+    });
+  };
+
+  const filteredRecentOrders = useMemo(() => filterOrdersByTag(recentOrders), [recentOrders, selectedTag, orderItemsMap, menuItemTagsMap]);
+  const filteredArchivedOrders = useMemo(() => filterOrdersByTag(archivedOrders), [archivedOrders, selectedTag, orderItemsMap, menuItemTagsMap]);
 
   // Group daily reports by month or year
   const groupedReports = useMemo(() => {
@@ -386,30 +436,54 @@ const OrderHistory = () => {
           </Card>}
 
         {!loading && (recentOrders.length > 0 || archivedOrders.length > 0 || dailyReports.length > 0) && <Tabs defaultValue="recent" className="space-y-4">
+            {/* Tag Filter */}
+            {menuTags.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm text-muted-foreground">Filter by tag:</span>
+                <Badge
+                  variant={selectedTag === "all" ? "default" : "outline"}
+                  className="cursor-pointer select-none"
+                  onClick={() => setSelectedTag("all")}
+                >
+                  All
+                </Badge>
+                {menuTags.map((tag: any) => (
+                  <Badge
+                    key={tag.id}
+                    variant={selectedTag === tag.name ? "default" : "outline"}
+                    className="cursor-pointer select-none"
+                    onClick={() => setSelectedTag(tag.name)}
+                  >
+                    {tag.name}
+                  </Badge>
+                ))}
+              </div>
+            )}
+
             <TabsList>
               <TabsTrigger value="recent" className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
                 {lastEndDayDate ? `Since ${format(new Date(lastEndDayDate), "PP p")}` : "All Orders"}
                 <Badge variant="secondary" className="ml-1">
-                  {recentOrders.length}
+                  {filteredRecentOrders.length}
                 </Badge>
               </TabsTrigger>
               <TabsTrigger value="archived" className="flex items-center gap-2">
                 <Archive className="h-4 w-4" />
                 Archives
                 <Badge variant="secondary" className="ml-1">
-                  {archivedOrders.length}
+                  {filteredArchivedOrders.length}
                 </Badge>
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="recent" className="space-y-4">
-              {recentOrders.length === 0 ? <Card>
+              {filteredRecentOrders.length === 0 ? <Card>
                   <CardContent className="py-12 text-center">
-                    <p className="text-muted-foreground">No recent orders</p>
+                    <p className="text-muted-foreground">{selectedTag !== "all" ? "No orders match this tag" : "No recent orders"}</p>
                   </CardContent>
                 </Card> : <div className="space-y-4">
-                  {recentOrders.map(renderOrderCard)}
+                  {filteredRecentOrders.map(renderOrderCard)}
                 </div>}
             </TabsContent>
 

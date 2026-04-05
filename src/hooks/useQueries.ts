@@ -165,6 +165,30 @@ export function useInvalidateExpenses() {
   return () => qc.invalidateQueries({ queryKey: ["expenses", restaurantId] });
 }
 
+// ── Menu Tags ───────────────────────────────────────────────
+export function useMenuTags() {
+  const { restaurantId } = useRestaurantContext();
+  return useQuery({
+    queryKey: ["menu-tags", restaurantId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("menu_tags")
+        .select("*")
+        .eq("restaurant_id", restaurantId!)
+        .order("name");
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!restaurantId,
+  });
+}
+
+export function useInvalidateMenuTags() {
+  const qc = useQueryClient();
+  const { restaurantId } = useRestaurantContext();
+  return () => qc.invalidateQueries({ queryKey: ["menu-tags", restaurantId] });
+}
+
 // ── Restaurant Settings ─────────────────────────────────────
 export function useRestaurantSettings() {
   const { restaurantId } = useRestaurantContext();

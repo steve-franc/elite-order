@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Shield, Users, ShoppingBag, TrendingUp, Calendar, AlertCircle, UserMinus, Target, Save, Link2, Copy, Check } from "lucide-react";
+import { Shield, Users, ShoppingBag, TrendingUp, Calendar, AlertCircle, UserMinus, Target, Save, Link2, Copy, Check, Tag, Plus, X } from "lucide-react";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
 import { formatPrice } from "@/lib/currency";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useUserRole } from "@/hooks/useUserRole";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useRestaurantContext } from "@/hooks/useRestaurantContext";
+import { useMenuTags, useInvalidateMenuTags } from "@/hooks/useQueries";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -75,6 +76,9 @@ const Admin = () => {
   const [fixedDailyBills, setFixedDailyBills] = useState<number>(0);
   const [editingBills, setEditingBills] = useState(false);
   const [billsInput, setBillsInput] = useState("");
+  const [newTagName, setNewTagName] = useState("");
+  const { data: menuTags = [], isLoading: tagsLoading } = useMenuTags();
+  const invalidateTags = useInvalidateMenuTags();
   useEffect(() => {
     if (isManager && restaurantId) {
       fetchData();
@@ -500,8 +504,9 @@ const Admin = () => {
         )}
 
         <Tabs defaultValue="staff" className="space-y-4">
-          <TabsList>
+          <TabsList className="flex-wrap">
             <TabsTrigger value="staff">Staff Management</TabsTrigger>
+            <TabsTrigger value="tags">Menu Tags</TabsTrigger>
             <TabsTrigger value="orders">All Orders</TabsTrigger>
             <TabsTrigger value="reports">Daily Reports</TabsTrigger>
           </TabsList>
@@ -565,6 +570,74 @@ const Admin = () => {
                       ))
                     )}
                   </div>}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="tags" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Tag className="h-5 w-5" />
+                  Menu Tags
+                </CardTitle>
+                <CardDescription>Create predefined tags to organize and filter menu items</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    const name = newTagName.trim();
+                    if (!name || !restaurantId) return;
+                    const { error } = await supabase.from("menu_tags").insert({ name, restaurant_id: restaurantId });
+                    if (error) {
+                      if (error.code === '23505') toast.error("Tag already exists");
+                      else toast.error("Failed to create tag");
+                      return;
+                    }
+                    setNewTagName("");
+                    invalidateTags();
+                    toast.success(`Tag "${name}" created`);
+                  }}
+                  className="flex gap-2"
+                >
+                  <Input
+                    placeholder="New tag name..."
+                    value={newTagName}
+                    onChange={(e) => setNewTagName(e.target.value)}
+                    maxLength={50}
+                    className="max-w-xs"
+                  />
+                  <Button type="submit" size="sm" disabled={!newTagName.trim()}>
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Tag
+                  </Button>
+                </form>
+
+                {tagsLoading ? (
+                  <p className="text-sm text-muted-foreground">Loading tags...</p>
+                ) : menuTags.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No tags created yet. Add your first tag above.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {menuTags.map((tag: any) => (
+                      <Badge key={tag.id} variant="secondary" className="gap-1 text-sm py-1 px-3">
+                        {tag.name}
+                        <button
+                          onClick={async () => {
+                            const { error } = await supabase.from("menu_tags").delete().eq("id", tag.id);
+                            if (error) { toast.error("Failed to delete tag"); return; }
+                            invalidateTags();
+                            toast.success(`Tag "${tag.name}" deleted`);
+                          }}
+                          className="ml-1 hover:text-destructive"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

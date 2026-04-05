@@ -18,7 +18,7 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from 
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useHaptics } from "@/hooks/use-haptics";
 import { useRestaurantContext } from "@/hooks/useRestaurantContext";
-import { useMenuItems } from "@/hooks/useQueries";
+import { useMenuItems, useMenuTags } from "@/hooks/useQueries";
 import { staffOrderSchema, validateInput, PAYMENT_METHODS } from "@/lib/validations";
 interface MenuItem {
   id: string;
@@ -29,6 +29,7 @@ interface MenuItem {
   description: string | null;
   pricing_unit: string;
   currency: string;
+  tags: string[];
 }
 interface OrderItem {
   menuItem: MenuItem;
@@ -45,6 +46,7 @@ const CreateOrder = () => {
     loading: restaurantLoading
   } = useRestaurantContext();
   const { data: menuItemsData = [] } = useMenuItems(true);
+  const { data: menuTags = [] } = useMenuTags();
   const menuItems = menuItemsData as MenuItem[];
   // Restore persisted order from sessionStorage
   const [orderItems, setOrderItems] = useState<OrderItem[]>(() => {
@@ -91,6 +93,7 @@ const CreateOrder = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [amountGiven, setAmountGiven] = useState("");
+  const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
 
   // Persist order state to sessionStorage
   useEffect(() => {
@@ -250,14 +253,24 @@ const CreateOrder = () => {
   };
   // Filter by search then group by category
   const filteredItems = useMemo(() => {
-    if (!searchQuery.trim()) return menuItems;
-    const q = searchQuery.toLowerCase();
-    return menuItems.filter(item =>
-      item.name.toLowerCase().includes(q) ||
-      (item.category && item.category.toLowerCase().includes(q)) ||
-      (item.description && item.description.toLowerCase().includes(q))
-    );
-  }, [menuItems, searchQuery]);
+    let items = menuItems;
+    // Filter by tags
+    if (selectedTags.size > 0) {
+      items = items.filter(item =>
+        item.tags && item.tags.some((tag: string) => selectedTags.has(tag))
+      );
+    }
+    // Filter by search
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      items = items.filter(item =>
+        item.name.toLowerCase().includes(q) ||
+        (item.category && item.category.toLowerCase().includes(q)) ||
+        (item.description && item.description.toLowerCase().includes(q))
+      );
+    }
+    return items;
+  }, [menuItems, searchQuery, selectedTags]);
 
   const groupedByCategory = filteredItems.reduce((acc, item) => {
     const category = item.category || "Uncategorized";
@@ -269,7 +282,7 @@ const CreateOrder = () => {
   }, {} as Record<string, MenuItem[]>);
 
   // Auto-expand all categories when searching
-  const isSearching = searchQuery.trim().length > 0;
+  const isSearching = searchQuery.trim().length > 0 || selectedTags.size > 0;
 
   const toggleCategory = (category: string) => {
     const newExpanded = new Set(expandedCategories);
@@ -482,7 +495,40 @@ const CreateOrder = () => {
             <h2 className="text-3xl font-bold">{restaurantName || "Create Order"}</h2>
           </div>
           <p className="text-muted-foreground">Select items to add to the order</p>
-        </div>
+            </div>
+
+            {/* Tag Filter */}
+            {menuTags.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {menuTags.map((tag: any) => {
+                  const isActive = selectedTags.has(tag.name);
+                  return (
+                    <Badge
+                      key={tag.id}
+                      variant={isActive ? "default" : "outline"}
+                      className="cursor-pointer select-none"
+                      onClick={() => {
+                        const next = new Set(selectedTags);
+                        if (isActive) next.delete(tag.name);
+                        else next.add(tag.name);
+                        setSelectedTags(next);
+                      }}
+                    >
+                      {tag.name}
+                    </Badge>
+                  );
+                })}
+                {selectedTags.size > 0 && (
+                  <Badge
+                    variant="outline"
+                    className="cursor-pointer text-destructive border-destructive/50"
+                    onClick={() => setSelectedTags(new Set())}
+                  >
+                    Clear
+                  </Badge>
+                )}
+              </div>
+            )}
 
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Menu Items - Grouped by Category */}
