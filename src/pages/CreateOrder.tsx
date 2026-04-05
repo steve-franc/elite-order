@@ -250,13 +250,24 @@ const CreateOrder = () => {
       setLoading(false);
     }
   };
-  // Filter by search then group by category
+  // Build set of categories for selected tags
+  const taggedCategories = useMemo(() => {
+    if (selectedTags.size === 0) return null;
+    const cats = new Set<string>();
+    (menuTags as any[]).forEach(tag => {
+      if (selectedTags.has(tag.name) && tag.category) {
+        cats.add(tag.category);
+      }
+    });
+    return cats;
+  }, [selectedTags, menuTags]);
+
   const filteredItems = useMemo(() => {
     let items = menuItems;
-    // Filter by tags
-    if (selectedTags.size > 0) {
+    // Filter by tags (via categories)
+    if (taggedCategories && taggedCategories.size > 0) {
       items = items.filter(item =>
-        item.tags && item.tags.some((tag: string) => selectedTags.has(tag))
+        item.category && taggedCategories.has(item.category)
       );
     }
     // Filter by search
@@ -269,7 +280,7 @@ const CreateOrder = () => {
       );
     }
     return items;
-  }, [menuItems, searchQuery, selectedTags]);
+  }, [menuItems, searchQuery, taggedCategories]);
 
   const groupedByCategory = filteredItems.reduce((acc, item) => {
     const category = item.category || "Uncategorized";
