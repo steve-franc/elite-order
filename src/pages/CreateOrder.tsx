@@ -495,7 +495,40 @@ const CreateOrder = () => {
             <h2 className="text-3xl font-bold">{restaurantName || "Create Order"}</h2>
           </div>
           <p className="text-muted-foreground">Select items to add to the order</p>
-        </div>
+            </div>
+
+            {/* Tag Filter */}
+            {menuTags.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {menuTags.map((tag: any) => {
+                  const isActive = selectedTags.has(tag.name);
+                  return (
+                    <Badge
+                      key={tag.id}
+                      variant={isActive ? "default" : "outline"}
+                      className="cursor-pointer select-none"
+                      onClick={() => {
+                        const next = new Set(selectedTags);
+                        if (isActive) next.delete(tag.name);
+                        else next.add(tag.name);
+                        setSelectedTags(next);
+                      }}
+                    >
+                      {tag.name}
+                    </Badge>
+                  );
+                })}
+                {selectedTags.size > 0 && (
+                  <Badge
+                    variant="outline"
+                    className="cursor-pointer text-destructive border-destructive/50"
+                    onClick={() => setSelectedTags(new Set())}
+                  >
+                    Clear
+                  </Badge>
+                )}
+              </div>
+            )}
 
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Menu Items - Grouped by Category */}
