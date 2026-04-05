@@ -76,6 +76,9 @@ const Admin = () => {
   const [fixedDailyBills, setFixedDailyBills] = useState<number>(0);
   const [editingBills, setEditingBills] = useState(false);
   const [billsInput, setBillsInput] = useState("");
+  const [newTagName, setNewTagName] = useState("");
+  const { data: menuTags = [], isLoading: tagsLoading } = useMenuTags();
+  const invalidateTags = useInvalidateMenuTags();
   useEffect(() => {
     if (isManager && restaurantId) {
       fetchData();
