@@ -508,37 +508,40 @@ const CreateOrder = () => {
             </div>
 
             {/* Tag Filter */}
-            {menuTags.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {menuTags.map((tag: any) => {
-                  const isActive = selectedTags.has(tag.name);
-                  return (
+            {menuTags.length > 0 && (() => {
+              const uniqueNames = [...new Set((menuTags as any[]).map(t => t.name))].sort();
+              return (
+                <div className="flex flex-wrap gap-2">
+                  {uniqueNames.map((name: string) => {
+                    const isActive = selectedTags.has(name);
+                    return (
+                      <Badge
+                        key={name}
+                        variant={isActive ? "default" : "outline"}
+                        className="cursor-pointer select-none"
+                        onClick={() => {
+                          const next = new Set(selectedTags);
+                          if (isActive) next.delete(name);
+                          else next.add(name);
+                          setSelectedTags(next);
+                        }}
+                      >
+                        {name}
+                      </Badge>
+                    );
+                  })}
+                  {selectedTags.size > 0 && (
                     <Badge
-                      key={tag.id}
-                      variant={isActive ? "default" : "outline"}
-                      className="cursor-pointer select-none"
-                      onClick={() => {
-                        const next = new Set(selectedTags);
-                        if (isActive) next.delete(tag.name);
-                        else next.add(tag.name);
-                        setSelectedTags(next);
-                      }}
+                      variant="outline"
+                      className="cursor-pointer text-destructive border-destructive/50"
+                      onClick={() => setSelectedTags(new Set())}
                     >
-                      {tag.name}
+                      Clear
                     </Badge>
-                  );
-                })}
-                {selectedTags.size > 0 && (
-                  <Badge
-                    variant="outline"
-                    className="cursor-pointer text-destructive border-destructive/50"
-                    onClick={() => setSelectedTags(new Set())}
-                  >
-                    Clear
-                  </Badge>
-                )}
-              </div>
-            )}
+                  )}
+                </div>
+              );
+            })()}
 
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Menu Items - Grouped by Category */}
