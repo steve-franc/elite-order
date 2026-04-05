@@ -29,7 +29,6 @@ interface MenuItem {
   description: string | null;
   pricing_unit: string;
   currency: string;
-  tags: string[];
 }
 interface OrderItem {
   menuItem: MenuItem;
