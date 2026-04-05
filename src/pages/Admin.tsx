@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useUserRole } from "@/hooks/useUserRole";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useRestaurantContext } from "@/hooks/useRestaurantContext";
+import { useMenuTags, useInvalidateMenuTags } from "@/hooks/useQueries";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -500,8 +501,9 @@ const Admin = () => {
         )}
 
         <Tabs defaultValue="staff" className="space-y-4">
-          <TabsList>
+          <TabsList className="flex-wrap">
             <TabsTrigger value="staff">Staff Management</TabsTrigger>
+            <TabsTrigger value="tags">Menu Tags</TabsTrigger>
             <TabsTrigger value="orders">All Orders</TabsTrigger>
             <TabsTrigger value="reports">Daily Reports</TabsTrigger>
           </TabsList>
