@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { formatPrice } from "@/lib/currency";
 import { useRestaurantContext } from "@/hooks/useRestaurantContext";
-import { useMenuItems, useInvalidateMenuItems, useRestaurantSettings, useMenuTags } from "@/hooks/useQueries";
+import { useMenuItems, useInvalidateMenuItems, useRestaurantSettings } from "@/hooks/useQueries";
 import { menuItemSchema, validateInput } from "@/lib/validations";
 
 interface MenuItem {
@@ -30,7 +30,6 @@ interface MenuItem {
   currency: string;
   is_inventory_item: boolean;
   stock_qty: number;
-  tags: string[];
 }
 const MenuManagement = () => {
   const { restaurantId } = useRestaurantContext();
@@ -38,7 +37,6 @@ const MenuManagement = () => {
   const menuItems = menuItemsData as MenuItem[];
   const invalidateMenu = useInvalidateMenuItems();
   const { data: settings } = useRestaurantSettings();
-  const { data: menuTags = [] } = useMenuTags();
   const [saving, setSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
@@ -54,7 +52,6 @@ const MenuManagement = () => {
     currency: "TRY",
     is_inventory_item: false,
     stock_qty: "",
-    tags: [] as string[],
   });
 
 
@@ -112,7 +109,6 @@ const MenuManagement = () => {
         currency: validation.data.currency,
         is_inventory_item: formData.is_inventory_item,
         stock_qty: formData.is_inventory_item ? parseInt(formData.stock_qty) || 0 : 0,
-        tags: formData.tags,
       };
       if (editingItem) {
         const {
@@ -180,7 +176,7 @@ const MenuManagement = () => {
       currency: "TRY",
       is_inventory_item: item.is_inventory_item,
       stock_qty: item.stock_qty?.toString() || "",
-      tags: item.tags || [],
+      
     });
     setDialogOpen(true);
   };
@@ -195,7 +191,7 @@ const MenuManagement = () => {
       currency: "TRY",
       is_inventory_item: false,
       stock_qty: "",
-      tags: [],
+      
     });
     setEditingItem(null);
   };
@@ -383,34 +379,6 @@ const MenuManagement = () => {
                     </div>
                   )}
                 </div>
-                {/* Tags */}
-                {menuTags.length > 0 && (
-                  <div className="space-y-2">
-                    <Label>Tags</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {menuTags.map((tag: any) => {
-                        const isSelected = formData.tags.includes(tag.name);
-                        return (
-                          <Badge
-                            key={tag.id}
-                            variant={isSelected ? "default" : "outline"}
-                            className="cursor-pointer select-none"
-                            onClick={() => {
-                              setFormData({
-                                ...formData,
-                                tags: isSelected
-                                  ? formData.tags.filter((t: string) => t !== tag.name)
-                                  : [...formData.tags, tag.name],
-                              });
-                            }}
-                          >
-                            {tag.name}
-                          </Badge>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
                 <div className="space-y-2">
                   <Label htmlFor="description">Description</Label>
                   <Textarea 
@@ -494,15 +462,6 @@ const MenuManagement = () => {
                                   Stock: {item.stock_qty}
                                 </Badge>}
                             </div>
-                            {item.tags && item.tags.length > 0 && (
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {item.tags.map((tag: string) => (
-                                  <Badge key={tag} variant="outline" className="text-xs bg-accent/50">
-                                    {tag}
-                                  </Badge>
-                                ))}
-                              </div>
-                            )}
                           </div>
                         </div>
                         {item.description && <CardDescription className="mt-2">{item.description}</CardDescription>}
