@@ -383,6 +383,34 @@ const MenuManagement = () => {
                     </div>
                   )}
                 </div>
+                {/* Tags */}
+                {menuTags.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Tags</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {menuTags.map((tag: any) => {
+                        const isSelected = formData.tags.includes(tag.name);
+                        return (
+                          <Badge
+                            key={tag.id}
+                            variant={isSelected ? "default" : "outline"}
+                            className="cursor-pointer select-none"
+                            onClick={() => {
+                              setFormData({
+                                ...formData,
+                                tags: isSelected
+                                  ? formData.tags.filter((t: string) => t !== tag.name)
+                                  : [...formData.tags, tag.name],
+                              });
+                            }}
+                          >
+                            {tag.name}
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="description">Description</Label>
                   <Textarea 
