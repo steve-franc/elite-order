@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { formatPrice } from "@/lib/currency";
 import { useRestaurantContext } from "@/hooks/useRestaurantContext";
-import { useMenuItems, useInvalidateMenuItems, useRestaurantSettings, useMenuTags } from "@/hooks/useQueries";
+import { useMenuItems, useInvalidateMenuItems, useRestaurantSettings } from "@/hooks/useQueries";
 import { menuItemSchema, validateInput } from "@/lib/validations";
 
 interface MenuItem {
@@ -37,7 +37,6 @@ const MenuManagement = () => {
   const menuItems = menuItemsData as MenuItem[];
   const invalidateMenu = useInvalidateMenuItems();
   const { data: settings } = useRestaurantSettings();
-  const { data: menuTags = [] } = useMenuTags();
   const [saving, setSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
@@ -53,7 +52,6 @@ const MenuManagement = () => {
     currency: "TRY",
     is_inventory_item: false,
     stock_qty: "",
-    tags: [] as string[],
   });
 
 
@@ -111,7 +109,6 @@ const MenuManagement = () => {
         currency: validation.data.currency,
         is_inventory_item: formData.is_inventory_item,
         stock_qty: formData.is_inventory_item ? parseInt(formData.stock_qty) || 0 : 0,
-        tags: formData.tags,
       };
       if (editingItem) {
         const {
