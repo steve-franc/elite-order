@@ -46,6 +46,7 @@ const CreateOrder = () => {
     loading: restaurantLoading
   } = useRestaurantContext();
   const { data: menuItemsData = [] } = useMenuItems(true);
+  const { data: menuTags = [] } = useMenuTags();
   const menuItems = menuItemsData as MenuItem[];
   // Restore persisted order from sessionStorage
   const [orderItems, setOrderItems] = useState<OrderItem[]>(() => {
@@ -92,6 +93,7 @@ const CreateOrder = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [amountGiven, setAmountGiven] = useState("");
+  const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
 
   // Persist order state to sessionStorage
   useEffect(() => {
