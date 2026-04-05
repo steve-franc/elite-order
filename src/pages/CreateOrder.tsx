@@ -18,7 +18,7 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from 
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useHaptics } from "@/hooks/use-haptics";
 import { useRestaurantContext } from "@/hooks/useRestaurantContext";
-import { useMenuItems } from "@/hooks/useQueries";
+import { useMenuItems, useMenuTags } from "@/hooks/useQueries";
 import { staffOrderSchema, validateInput, PAYMENT_METHODS } from "@/lib/validations";
 interface MenuItem {
   id: string;
@@ -29,6 +29,7 @@ interface MenuItem {
   description: string | null;
   pricing_unit: string;
   currency: string;
+  tags: string[];
 }
 interface OrderItem {
   menuItem: MenuItem;
