@@ -574,7 +574,73 @@ const Admin = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="orders" className="space-y-4">
+          <TabsContent value="tags" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Tag className="h-5 w-5" />
+                  Menu Tags
+                </CardTitle>
+                <CardDescription>Create predefined tags to organize and filter menu items</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    const name = newTagName.trim();
+                    if (!name || !restaurantId) return;
+                    const { error } = await supabase.from("menu_tags").insert({ name, restaurant_id: restaurantId });
+                    if (error) {
+                      if (error.code === '23505') toast.error("Tag already exists");
+                      else toast.error("Failed to create tag");
+                      return;
+                    }
+                    setNewTagName("");
+                    invalidateTags();
+                    toast.success(`Tag "${name}" created`);
+                  }}
+                  className="flex gap-2"
+                >
+                  <Input
+                    placeholder="New tag name..."
+                    value={newTagName}
+                    onChange={(e) => setNewTagName(e.target.value)}
+                    maxLength={50}
+                    className="max-w-xs"
+                  />
+                  <Button type="submit" size="sm" disabled={!newTagName.trim()}>
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Tag
+                  </Button>
+                </form>
+
+                {tagsLoading ? (
+                  <p className="text-sm text-muted-foreground">Loading tags...</p>
+                ) : menuTags.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No tags created yet. Add your first tag above.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {menuTags.map((tag: any) => (
+                      <Badge key={tag.id} variant="secondary" className="gap-1 text-sm py-1 px-3">
+                        {tag.name}
+                        <button
+                          onClick={async () => {
+                            const { error } = await supabase.from("menu_tags").delete().eq("id", tag.id);
+                            if (error) { toast.error("Failed to delete tag"); return; }
+                            invalidateTags();
+                            toast.success(`Tag "${tag.name}" deleted`);
+                          }}
+                          className="ml-1 hover:text-destructive"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
             <div className="flex justify-between items-center">
               <h3 className="text-lg font-semibold">All Orders</h3>
               <Select value={dateFilter} onValueChange={setDateFilter}>
