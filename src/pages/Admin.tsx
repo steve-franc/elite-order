@@ -36,7 +36,7 @@ interface StaffMember {
 }
 interface Order {
   id: string;
-  order_number: number;
+  order_number: string;
   total: number;
   payment_method: string;
   created_at: string;

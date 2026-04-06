@@ -28,7 +28,7 @@ interface DailyReportInfo {
 }
 interface Order {
   id: string;
-  order_number: number;
+  order_number: string;
   total: number;
   payment_method: string;
   notes: string | null;

@@ -324,7 +324,7 @@ const TabDetail = ({
           currency: tab.currency,
           is_public_order: false,
           restaurant_id: restaurantId,
-          order_number: 0,
+          order_number: "",
           customer_name: tab.customer_name || null,
         })
         .select()
