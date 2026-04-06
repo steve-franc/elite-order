@@ -18,7 +18,7 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from 
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useHaptics } from "@/hooks/use-haptics";
 import { useRestaurantContext } from "@/hooks/useRestaurantContext";
-import { useMenuItems, useMenuTags } from "@/hooks/useQueries";
+import { useMenuItems, useMenuTags, useRestaurantSettings } from "@/hooks/useQueries";
 import { staffOrderSchema, validateInput, DEFAULT_PAYMENT_METHODS } from "@/lib/validations";
 interface MenuItem {
   id: string;
@@ -46,6 +46,8 @@ const CreateOrder = () => {
   } = useRestaurantContext();
   const { data: menuItemsData = [] } = useMenuItems(true);
   const { data: menuTags = [] } = useMenuTags();
+  const { data: restaurantSettings } = useRestaurantSettings();
+  const paymentMethods: string[] = (restaurantSettings?.payment_methods as string[] | null) || [...DEFAULT_PAYMENT_METHODS];
   const menuItems = menuItemsData as MenuItem[];
   // Restore persisted order from sessionStorage
   const [orderItems, setOrderItems] = useState<OrderItem[]>(() => {
@@ -378,7 +380,7 @@ const CreateOrder = () => {
         <div>
           <Label>Payment Method</Label>
           <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="mt-2 grid grid-cols-2 gap-2">
-            {PAYMENT_METHODS.map(method => (
+            {paymentMethods.map(method => (
               <div key={method} className="flex items-center space-x-2">
                 <RadioGroupItem value={method} id={method.toLowerCase()} />
                 <Label htmlFor={method.toLowerCase()} className="font-normal">
