@@ -22,7 +22,7 @@ import { formatPrice } from "@/lib/currency";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useHaptics } from "@/hooks/use-haptics";
 import { useRestaurantContext } from "@/hooks/useRestaurantContext";
-import { useTabs, useInvalidateTabs, useMenuItems } from "@/hooks/useQueries";
+import { useTabs, useInvalidateTabs, useMenuItems, useRestaurantSettings } from "@/hooks/useQueries";
 import { DEFAULT_PAYMENT_METHODS } from "@/lib/validations";
 
 interface MenuItem {
@@ -609,7 +609,7 @@ const TabDetail = ({
               <div>
                 <Label>Payment Method</Label>
                 <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="mt-2 grid grid-cols-2 gap-2">
-                  {PAYMENT_METHODS.map((method) => (
+                  {paymentMethods.map((method) => (
                     <div key={method} className="flex items-center space-x-2">
                       <RadioGroupItem value={method} id={`close-${method.toLowerCase()}`} />
                       <Label htmlFor={`close-${method.toLowerCase()}`} className="font-normal">{method}</Label>
