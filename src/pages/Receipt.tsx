@@ -58,6 +58,7 @@ const Receipt = () => {
   const [amountGiven, setAmountGiven] = useState("");
   const [restaurantName, setRestaurantName] = useState("Restaurant");
   const isPendingPublicOrder = searchParams.get("pending") === "true";
+  const [orderStatus, setOrderStatus] = useState<string>("pending");
 
   useEffect(() => {
     if (id) {
@@ -247,7 +248,6 @@ const Receipt = () => {
   }
 
   const isPublicView = !searchParams.has("edit") && isPendingPublicOrder;
-  const [orderStatus, setOrderStatus] = useState<string>("pending");
 
   // Real-time listener for order status changes (for public waiting screen)
   useEffect(() => {
