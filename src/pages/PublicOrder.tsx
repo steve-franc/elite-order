@@ -399,7 +399,7 @@ const PublicOrder = () => {
       <div className="max-w-7xl mx-auto p-4 md:p-6">
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Menu Items */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-6 pb-20 md:pb-0">
             {Object.entries(groupedItems).map(([category, items]) => (
               <div key={category}>
                 <h3 className="text-xl font-semibold mb-3">{category}</h3>
