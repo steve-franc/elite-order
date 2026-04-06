@@ -21,7 +21,7 @@ interface OrderItem {
 
 interface OrderWithItems {
   id: string;
-  order_number: number;
+  order_number: string;
   total: number;
   payment_method: string;
   notes: string | null;

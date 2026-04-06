@@ -222,7 +222,7 @@ const CreateOrder = () => {
         currency: currency,
         is_public_order: false,
         restaurant_id: restaurantId,
-        order_number: 0,
+        order_number: "",
         discount_amount: calculateDiscountAmount(),
       }]).select().single();
       if (orderError) throw orderError;
