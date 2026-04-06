@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { Printer, ArrowLeft, Edit, Save, X, Calculator, Clock, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
 import { formatPrice } from "@/lib/currency";
-import { PAYMENT_METHODS } from "@/lib/validations";
+import { DEFAULT_PAYMENT_METHODS } from "@/lib/validations";
 
 interface OrderData {
   id: string;
@@ -57,6 +57,7 @@ const Receipt = () => {
   // Change calculator
   const [amountGiven, setAmountGiven] = useState("");
   const [restaurantName, setRestaurantName] = useState("Restaurant");
+  const [paymentMethods, setPaymentMethods] = useState<string[]>([...DEFAULT_PAYMENT_METHODS]);
   const isPendingPublicOrder = searchParams.get("pending") === "true";
   const [orderStatus, setOrderStatus] = useState<string>("pending");
 
@@ -123,10 +124,15 @@ const Receipt = () => {
       if (orderData.restaurant_id) {
         const { data: settings } = await supabase
           .from("restaurant_settings")
-          .select("restaurant_name")
+          .select("restaurant_name, payment_methods")
           .eq("restaurant_id", orderData.restaurant_id)
           .maybeSingle();
-        if (settings) setRestaurantName(settings.restaurant_name);
+        if (settings) {
+          setRestaurantName(settings.restaurant_name);
+          if (Array.isArray(settings.payment_methods) && settings.payment_methods.length > 0) {
+            setPaymentMethods(settings.payment_methods as string[]);
+          }
+        }
       }
     } catch (error: any) {
       toast.error("Failed to load receipt");
@@ -462,7 +468,7 @@ const Receipt = () => {
                 <div>
                   <Label>Payment Method</Label>
                   <RadioGroup value={editPayment} onValueChange={setEditPayment} className="mt-2 grid grid-cols-2 gap-2">
-                    {PAYMENT_METHODS.map(method => (
+                    {paymentMethods.map(method => (
                       <div key={method} className="flex items-center space-x-2">
                         <RadioGroupItem value={method} id={`edit-${method}`} />
                         <Label htmlFor={`edit-${method}`} className="font-normal">{method}</Label>
