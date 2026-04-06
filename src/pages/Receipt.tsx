@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Printer, ArrowLeft, Edit, Save, X, Calculator, Clock } from "lucide-react";
+import { Printer, ArrowLeft, Edit, Save, X, Calculator, Clock, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
 import { formatPrice } from "@/lib/currency";
 import { PAYMENT_METHODS } from "@/lib/validations";
@@ -58,6 +58,7 @@ const Receipt = () => {
   const [amountGiven, setAmountGiven] = useState("");
   const [restaurantName, setRestaurantName] = useState("Restaurant");
   const isPendingPublicOrder = searchParams.get("pending") === "true";
+  const [orderStatus, setOrderStatus] = useState<string>("pending");
 
   useEffect(() => {
     if (id) {
@@ -230,6 +231,44 @@ const Receipt = () => {
 
   const changeAmount = amountGiven ? parseFloat(amountGiven) - (order?.total || 0) : null;
 
+  // Real-time listener for order status changes (for public waiting screen)
+  useEffect(() => {
+    if (!isPendingPublicOrder || !id) return;
+
+    const channel = supabase
+      .channel(`order-status-${id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'orders',
+          filter: `id=eq.${id}`
+        },
+        (payload) => {
+          const newStatus = (payload.new as any)?.status;
+          if (newStatus) setOrderStatus(newStatus);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'orders',
+          filter: `id=eq.${id}`
+        },
+        () => {
+          setOrderStatus("declined");
+        }
+      )
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [isPendingPublicOrder, id]);
+
   if (loading) {
     return (
       <Layout>
@@ -246,21 +285,49 @@ const Receipt = () => {
     );
   }
 
-  const isPublicView = !searchParams.has("edit") && isPendingPublicOrder;
-
   // Pending approval screen for public orders
   if (isPendingPublicOrder && order) {
+    const isConfirmed = orderStatus === "confirmed";
+    const isDeclined = orderStatus === "declined";
+    const isPending = !isConfirmed && !isDeclined;
+
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="max-w-md w-full">
           <CardContent className="pt-8 pb-8 text-center space-y-4">
-            <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-              <Clock className="h-8 w-8 text-primary animate-pulse" />
-            </div>
-            <h2 className="text-xl font-bold">Waiting for Approval</h2>
-            <p className="text-muted-foreground text-sm">
-              Your order <span className="font-semibold text-foreground">#{order.order_number}</span> has been submitted and is waiting for the restaurant to confirm.
-            </p>
+            {isPending && (
+              <>
+                <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                  <Clock className="h-8 w-8 text-primary animate-pulse" />
+                </div>
+                <h2 className="text-xl font-bold">Waiting for Approval</h2>
+                <p className="text-muted-foreground text-sm">
+                  Your order <span className="font-semibold text-foreground">#{order.order_number}</span> has been submitted and is waiting for the restaurant to confirm.
+                </p>
+              </>
+            )}
+            {isConfirmed && (
+              <>
+                <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto">
+                  <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
+                </div>
+                <h2 className="text-xl font-bold text-green-700 dark:text-green-400">Order Confirmed!</h2>
+                <p className="text-muted-foreground text-sm">
+                  Your order <span className="font-semibold text-foreground">#{order.order_number}</span> has been accepted by the restaurant. It's being prepared now!
+                </p>
+              </>
+            )}
+            {isDeclined && (
+              <>
+                <div className="h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
+                  <X className="h-8 w-8 text-destructive" />
+                </div>
+                <h2 className="text-xl font-bold text-destructive">Order Declined</h2>
+                <p className="text-muted-foreground text-sm">
+                  Unfortunately, your order <span className="font-semibold text-foreground">#{order.order_number}</span> was declined by the restaurant. Please contact them for more information.
+                </p>
+              </>
+            )}
             <Separator />
             <div className="text-left space-y-2">
               <p className="text-sm font-medium">Order Summary</p>
@@ -276,9 +343,11 @@ const Receipt = () => {
                 <span className="text-primary">{formatPrice(order.total, order.currency)}</span>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              You will receive confirmation once your order is approved.
-            </p>
+            {isPending && (
+              <p className="text-xs text-muted-foreground">
+                This page updates automatically. You'll see the result here once the restaurant responds.
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>
