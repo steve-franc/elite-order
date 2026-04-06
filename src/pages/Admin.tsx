@@ -78,6 +78,8 @@ const Admin = () => {
   const [billsInput, setBillsInput] = useState("");
   const [newTagName, setNewTagName] = useState("");
   const [newTagCategory, setNewTagCategory] = useState("");
+  const [configuredPaymentMethods, setConfiguredPaymentMethods] = useState<string[]>([]);
+  const [newPaymentMethod, setNewPaymentMethod] = useState("");
   const { data: menuTags = [], isLoading: tagsLoading } = useMenuTags();
   const invalidateTags = useInvalidateMenuTags();
   const { data: menuItemsData = [] } = useMenuItems();
