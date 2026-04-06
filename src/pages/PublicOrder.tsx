@@ -50,6 +50,7 @@ const PublicOrder = () => {
   const [restaurantId, setRestaurantId] = useState<string | null>(urlRestaurantId || null);
   const [publicOrdersDisabled, setPublicOrdersDisabled] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
     if (!urlRestaurantId) {
