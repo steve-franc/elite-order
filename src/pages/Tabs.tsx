@@ -147,6 +147,8 @@ const TabDetail = ({
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const haptics = useHaptics();
+  const { data: restaurantSettings } = useRestaurantSettings();
+  const paymentMethods: string[] = (restaurantSettings?.payment_methods as string[] | null) || [...DEFAULT_PAYMENT_METHODS];
 
   const [tabItems, setTabItems] = useState<TabItem[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
