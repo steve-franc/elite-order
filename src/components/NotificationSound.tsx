@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useRestaurantAndRole';
@@ -31,7 +31,6 @@ function playChime() {
     }
     const ctx = globalAudioCtx;
     const now = ctx.currentTime;
-    // Three-tone ascending chime
     [587.33, 880, 1046.5].forEach((freq, i) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -49,8 +48,32 @@ function playChime() {
   }
 }
 
+// Request browser notification permission
+export function requestNotificationPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+
+function sendBrowserNotification(title: string, body: string) {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    try {
+      new Notification(title, { body, icon: '/placeholder.svg' });
+    } catch (e) {
+      console.warn('Browser notification failed:', e);
+    }
+  }
+}
+
 export const NotificationSound = () => {
   const { session } = useAuth();
+
+  // Request permission on mount
+  useEffect(() => {
+    if (session?.user) {
+      requestNotificationPermission();
+    }
+  }, [session?.user]);
 
   useEffect(() => {
     if (!session?.user) return;
@@ -74,6 +97,10 @@ export const NotificationSound = () => {
             description: 'Go to Order History to confirm or decline.',
             id: `pending-order-${(payload.new as any)?.id}`,
           });
+          sendBrowserNotification(
+            '🔔 New Online Order',
+            `New order from ${customerName}. Go to Order History to confirm.`
+          );
         }
       )
       .subscribe();
