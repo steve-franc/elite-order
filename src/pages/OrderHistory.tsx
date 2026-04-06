@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Layout from "@/components/Layout";
@@ -61,7 +61,27 @@ const OrderHistory = () => {
   const { restaurantId } = useRestaurantContext();
   const { data: ordersData, isLoading: loading } = useOrders();
   const invalidateOrders = useInvalidateOrders();
-  
+
+  // Real-time: refresh orders on any insert/update/delete
+  useEffect(() => {
+    if (!restaurantId) return;
+
+    const channel = supabase
+      .channel('orders-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders' },
+        () => {
+          invalidateOrders();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [restaurantId, invalidateOrders]);
+
   const recentOrdersRaw = (ordersData?.recentOrders || []) as Order[];
   // Sort pending orders to the top
   const recentOrders = useMemo(() => {
