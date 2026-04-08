@@ -93,6 +93,48 @@ export type Database = {
           },
         ]
       }
+      debtors: {
+        Row: {
+          amount_owed: number
+          created_at: string
+          currency: string
+          customer_name: string
+          id: string
+          is_resolved: boolean
+          notes: string | null
+          resolved_at: string | null
+          restaurant_id: string
+          staff_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount_owed?: number
+          created_at?: string
+          currency?: string
+          customer_name: string
+          id?: string
+          is_resolved?: boolean
+          notes?: string | null
+          resolved_at?: string | null
+          restaurant_id: string
+          staff_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount_owed?: number
+          created_at?: string
+          currency?: string
+          customer_name?: string
+          id?: string
+          is_resolved?: boolean
+          notes?: string | null
+          resolved_at?: string | null
+          restaurant_id?: string
+          staff_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       inventory: {
         Row: {
           created_at: string
