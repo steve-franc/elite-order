@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Shield, Users, ShoppingBag, TrendingUp, Calendar, AlertCircle, UserMinus, Target, Save, Link2, Copy, Check, Tag, Plus, X } from "lucide-react";
+import { Shield, Users, ShoppingBag, TrendingUp, Calendar, AlertCircle, UserMinus, Target, Save, Link2, Copy, Check, Tag, Plus, X, Settings } from "lucide-react";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
 import { formatPrice } from "@/lib/currency";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,6 +17,8 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useRestaurantContext } from "@/hooks/useRestaurantContext";
 import { useMenuTags, useInvalidateMenuTags, useMenuItems } from "@/hooks/useQueries";
+import { PaymentMethodConfig, parsePaymentMethods } from "@/lib/payment-methods";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -78,8 +80,12 @@ const Admin = () => {
   const [billsInput, setBillsInput] = useState("");
   const [newTagName, setNewTagName] = useState("");
   const [newTagCategory, setNewTagCategory] = useState("");
-  const [configuredPaymentMethods, setConfiguredPaymentMethods] = useState<string[]>([]);
+  const [configuredPaymentMethods, setConfiguredPaymentMethods] = useState<PaymentMethodConfig[]>([]);
   const [newPaymentMethod, setNewPaymentMethod] = useState("");
+  const [editingMethod, setEditingMethod] = useState<PaymentMethodConfig | null>(null);
+  const [editCurrency, setEditCurrency] = useState("");
+  const [editAccount, setEditAccount] = useState("");
+  const [editRate, setEditRate] = useState("");
   const { data: menuTags = [], isLoading: tagsLoading } = useMenuTags();
   const invalidateTags = useInvalidateMenuTags();
   const { data: menuItemsData = [] } = useMenuItems();
@@ -132,44 +138,66 @@ const Admin = () => {
     if (data) {
       setFixedDailyBills(Number(data.fixed_daily_bills) || 0);
       setBillsInput(String(data.fixed_daily_bills || 0));
-      if (Array.isArray(data.payment_methods)) {
-        setConfiguredPaymentMethods(data.payment_methods as string[]);
-      }
+      setConfiguredPaymentMethods(parsePaymentMethods(data.payment_methods));
     }
+  };
+
+  const savePaymentMethods = async (updated: PaymentMethodConfig[]) => {
+    if (!restaurantId) return false;
+    const { error } = await supabase
+      .from("restaurant_settings")
+      .update({ payment_methods: updated as any })
+      .eq("restaurant_id", restaurantId);
+    if (error) { toast.error("Failed to save payment methods"); return false; }
+    setConfiguredPaymentMethods(updated);
+    return true;
   };
 
   const addPaymentMethod = async () => {
     const method = newPaymentMethod.trim();
     if (!method || !restaurantId) return;
-    if (configuredPaymentMethods.includes(method)) {
+    if (configuredPaymentMethods.some(m => m.name === method)) {
       toast.error("Payment method already exists");
       return;
     }
-    const updated = [...configuredPaymentMethods, method];
-    const { error } = await supabase
-      .from("restaurant_settings")
-      .update({ payment_methods: updated })
-      .eq("restaurant_id", restaurantId);
-    if (error) { toast.error("Failed to add payment method"); return; }
-    setConfiguredPaymentMethods(updated);
-    setNewPaymentMethod("");
-    toast.success(`Added "${method}"`);
+    const newConfig: PaymentMethodConfig = { name: method, currency: "TRY", account_number: "", conversion_rate: 1 };
+    const updated = [...configuredPaymentMethods, newConfig];
+    if (await savePaymentMethods(updated)) {
+      setNewPaymentMethod("");
+      toast.success(`Added "${method}"`);
+    }
   };
 
-  const removePaymentMethod = async (method: string) => {
+  const removePaymentMethod = async (methodName: string) => {
     if (!restaurantId) return;
-    const updated = configuredPaymentMethods.filter(m => m !== method);
+    const updated = configuredPaymentMethods.filter(m => m.name !== methodName);
     if (updated.length === 0) {
       toast.error("Must have at least one payment method");
       return;
     }
-    const { error } = await supabase
-      .from("restaurant_settings")
-      .update({ payment_methods: updated })
-      .eq("restaurant_id", restaurantId);
-    if (error) { toast.error("Failed to remove payment method"); return; }
-    setConfiguredPaymentMethods(updated);
-    toast.success(`Removed "${method}"`);
+    if (await savePaymentMethods(updated)) {
+      toast.success(`Removed "${methodName}"`);
+    }
+  };
+
+  const openEditMethod = (method: PaymentMethodConfig) => {
+    setEditingMethod(method);
+    setEditCurrency(method.currency);
+    setEditAccount(method.account_number);
+    setEditRate(String(method.conversion_rate));
+  };
+
+  const saveEditMethod = async () => {
+    if (!editingMethod) return;
+    const updated = configuredPaymentMethods.map(m =>
+      m.name === editingMethod.name
+        ? { ...m, currency: editCurrency.trim() || "TRY", account_number: editAccount.trim(), conversion_rate: parseFloat(editRate) || 1 }
+        : m
+    );
+    if (await savePaymentMethods(updated)) {
+      toast.success(`Updated "${editingMethod.name}"`);
+      setEditingMethod(null);
+    }
   };
 
   const saveFixedDailyBills = async () => {
@@ -579,19 +607,23 @@ const Admin = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex flex-wrap gap-2">
+              <div className="space-y-2">
                 {configuredPaymentMethods.map(method => (
-                  <Badge key={method} variant="secondary" className="gap-1 pr-1">
-                    {method}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-4 w-4 hover:text-destructive"
-                      onClick={() => removePaymentMethod(method)}
-                    >
-                      <X className="h-3 w-3" />
+                  <div key={method.name} className="flex items-center gap-2 p-2 border rounded-lg">
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">{method.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {method.currency} · Rate: {method.conversion_rate}
+                        {method.account_number ? ` · Acct: ${method.account_number}` : ""}
+                      </p>
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditMethod(method)}>
+                      <Settings className="h-3.5 w-3.5" />
                     </Button>
-                  </Badge>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onClick={() => removePaymentMethod(method.name)}>
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 ))}
               </div>
               <div className="flex items-center gap-2">
@@ -609,6 +641,36 @@ const Admin = () => {
                 </Button>
               </div>
             </CardContent>
+
+            {/* Edit payment method dialog */}
+            <Dialog open={!!editingMethod} onOpenChange={(open) => !open && setEditingMethod(null)}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Configure "{editingMethod?.name}"</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label>Currency Code</Label>
+                    <Input value={editCurrency} onChange={e => setEditCurrency(e.target.value.slice(0, 10))} placeholder="TRY" className="mt-2" maxLength={10} />
+                  </div>
+                  <div>
+                    <Label>Account Number / Details</Label>
+                    <Input value={editAccount} onChange={e => setEditAccount(e.target.value.slice(0, 200))} placeholder="e.g. TR12 3456 7890..." className="mt-2" maxLength={200} />
+                  </div>
+                  <div>
+                    <Label>Conversion Rate (1 TRY = ?)</Label>
+                    <Input type="number" value={editRate} onChange={e => setEditRate(e.target.value)} placeholder="1" className="mt-2" min={0} step="0.0001" />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      If 1 TRY = 0.03 USD, enter 0.03. If same currency, keep at 1.
+                    </p>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setEditingMethod(null)}>Cancel</Button>
+                  <Button onClick={saveEditMethod}>Save</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </Card>
         )}
 

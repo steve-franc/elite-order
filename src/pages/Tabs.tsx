@@ -23,7 +23,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useHaptics } from "@/hooks/use-haptics";
 import { useRestaurantContext } from "@/hooks/useRestaurantContext";
 import { useTabs, useInvalidateTabs, useMenuItems, useRestaurantSettings } from "@/hooks/useQueries";
-import { DEFAULT_PAYMENT_METHODS } from "@/lib/validations";
+import { parsePaymentMethods, getMethodNames } from "@/lib/payment-methods";
 
 interface MenuItem {
   id: string;
@@ -148,7 +148,7 @@ const TabDetail = ({
   const isMobile = useIsMobile();
   const haptics = useHaptics();
   const { data: restaurantSettings } = useRestaurantSettings();
-  const paymentMethods: string[] = (restaurantSettings?.payment_methods as string[] | null) || [...DEFAULT_PAYMENT_METHODS];
+  const paymentMethods: string[] = getMethodNames(parsePaymentMethods(restaurantSettings?.payment_methods));
 
   const [tabItems, setTabItems] = useState<TabItem[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -158,6 +158,8 @@ const TabDetail = ({
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [closing, setClosing] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [tabNotes, setTabNotes] = useState(tab.notes || "");
+  const [savingNotes, setSavingNotes] = useState(false);
 
   // Pending items to add (not yet saved)
   const [pendingItems, setPendingItems] = useState<
@@ -577,6 +579,39 @@ const TabDetail = ({
                 </div>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Notes */}
+        <Card className="mb-4">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Notes</CardTitle>
+            <CardDescription>Track partial payments or special info</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Textarea
+              value={tabNotes}
+              onChange={e => setTabNotes(e.target.value.slice(0, 2000))}
+              placeholder="e.g. Paid ₺50 upfront, deduct from total..."
+              rows={3}
+              maxLength={2000}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-2"
+              disabled={savingNotes || tabNotes === (tab.notes || "")}
+              onClick={async () => {
+                setSavingNotes(true);
+                const { error } = await supabase.from("tabs").update({ notes: tabNotes || null }).eq("id", tab.id);
+                setSavingNotes(false);
+                if (error) { toast.error("Failed to save notes"); return; }
+                tab.notes = tabNotes;
+                toast.success("Notes saved");
+              }}
+            >
+              {savingNotes ? "Saving..." : "Save Notes"}
+            </Button>
           </CardContent>
         </Card>
 
