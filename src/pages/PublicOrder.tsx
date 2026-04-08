@@ -357,14 +357,42 @@ const PublicOrder = () => {
         </div>
         <div>
           <Label>Payment Method</Label>
-          <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="mt-2 grid grid-cols-2 gap-2">
+          <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="mt-2 space-y-2">
             {availablePaymentMethods.map((method) => (
-              <div key={method} className="flex items-center space-x-2">
-                <RadioGroupItem value={method} id={`public-${method.toLowerCase()}`} />
-                <Label htmlFor={`public-${method.toLowerCase()}`} className="font-normal">{method}</Label>
+              <div key={method.name} className="flex items-center space-x-2">
+                <RadioGroupItem value={method.name} id={`public-${method.name.toLowerCase()}`} />
+                <Label htmlFor={`public-${method.name.toLowerCase()}`} className="font-normal">
+                  {method.name}
+                  {method.currency !== "TRY" && (
+                    <span className="text-xs text-muted-foreground ml-1">({method.currency})</span>
+                  )}
+                </Label>
               </div>
             ))}
           </RadioGroup>
+
+          {/* Show selected method details */}
+          {(() => {
+            const selected = availablePaymentMethods.find(m => m.name === paymentMethod);
+            if (!selected || (selected.conversion_rate === 1 && !selected.account_number)) return null;
+            const total = calculateTotal();
+            const converted = total * selected.conversion_rate;
+            return (
+              <div className="mt-3 p-3 rounded-lg bg-muted/50 space-y-1">
+                {selected.conversion_rate !== 1 && (
+                  <p className="text-sm font-medium">
+                    Converted: <span className="text-primary">{converted.toFixed(2)} {selected.currency}</span>
+                  </p>
+                )}
+                {selected.account_number && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">Pay to:</p>
+                    <p className="text-sm font-mono select-all break-all">{selected.account_number}</p>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
         <div>
           <Label htmlFor="notes">Special Requests (Optional)</Label>
@@ -379,6 +407,19 @@ const PublicOrder = () => {
           <span>Total</span>
           <span className="text-primary">{formatPrice(calculateTotal(), currency)}</span>
         </div>
+        {(() => {
+          const selected = availablePaymentMethods.find(m => m.name === paymentMethod);
+          if (selected && selected.conversion_rate !== 1) {
+            const converted = calculateTotal() * selected.conversion_rate;
+            return (
+              <div className="flex justify-between text-sm text-muted-foreground">
+                <span>In {selected.currency}</span>
+                <span>{converted.toFixed(2)} {selected.currency}</span>
+              </div>
+            );
+          }
+          return null;
+        })()}
         <Button className="w-full" size="lg" onClick={handleSubmitOrder} disabled={loading || orderItems.length === 0}>
           {loading ? "Processing..." : "Place Order"}
         </Button>
