@@ -78,6 +78,12 @@ const Admin = () => {
   const [fixedDailyBills, setFixedDailyBills] = useState<number>(0);
   const [editingBills, setEditingBills] = useState(false);
   const [billsInput, setBillsInput] = useState("");
+  const [fixedMonthlyExpenses, setFixedMonthlyExpenses] = useState<number>(0);
+  const [editingMonthly, setEditingMonthly] = useState(false);
+  const [monthlyInput, setMonthlyInput] = useState("");
+  const [profitMarginThreshold, setProfitMarginThreshold] = useState<number>(20);
+  const [editingThreshold, setEditingThreshold] = useState(false);
+  const [thresholdInput, setThresholdInput] = useState("");
   const [newTagName, setNewTagName] = useState("");
   const [newTagCategory, setNewTagCategory] = useState("");
   const [configuredPaymentMethods, setConfiguredPaymentMethods] = useState<PaymentMethodConfig[]>([]);
@@ -132,14 +138,44 @@ const Admin = () => {
     if (!restaurantId) return;
     const { data } = await supabase
       .from("restaurant_settings")
-      .select("fixed_daily_bills, payment_methods")
+      .select("fixed_daily_bills, payment_methods, fixed_monthly_expenses, profit_margin_threshold")
       .eq("restaurant_id", restaurantId)
       .maybeSingle();
     if (data) {
       setFixedDailyBills(Number(data.fixed_daily_bills) || 0);
       setBillsInput(String(data.fixed_daily_bills || 0));
       setConfiguredPaymentMethods(parsePaymentMethods(data.payment_methods));
+      setFixedMonthlyExpenses(Number((data as any).fixed_monthly_expenses) || 0);
+      setMonthlyInput(String((data as any).fixed_monthly_expenses || 0));
+      setProfitMarginThreshold(Number((data as any).profit_margin_threshold) || 20);
+      setThresholdInput(String((data as any).profit_margin_threshold || 20));
     }
+  };
+
+  const saveFixedMonthlyExpenses = async () => {
+    if (!restaurantId) return;
+    const value = parseFloat(monthlyInput) || 0;
+    const { error } = await supabase
+      .from("restaurant_settings")
+      .update({ fixed_monthly_expenses: value } as any)
+      .eq("restaurant_id", restaurantId);
+    if (error) { toast.error("Failed to save"); return; }
+    setFixedMonthlyExpenses(value);
+    setEditingMonthly(false);
+    toast.success("Monthly fixed expenses updated");
+  };
+
+  const saveProfitThreshold = async () => {
+    if (!restaurantId) return;
+    const value = parseFloat(thresholdInput) || 20;
+    const { error } = await supabase
+      .from("restaurant_settings")
+      .update({ profit_margin_threshold: value } as any)
+      .eq("restaurant_id", restaurantId);
+    if (error) { toast.error("Failed to save"); return; }
+    setProfitMarginThreshold(value);
+    setEditingThreshold(false);
+    toast.success("Profit margin threshold updated");
   };
 
   const savePaymentMethods = async (updated: PaymentMethodConfig[]) => {
