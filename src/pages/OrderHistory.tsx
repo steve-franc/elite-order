@@ -62,6 +62,8 @@ const OrderHistory = () => {
   const { restaurantId } = useRestaurantContext();
   const { data: ordersData, isLoading: loading } = useOrders();
   const invalidateOrders = useInvalidateOrders();
+  const { data: expensesData = [] } = useExpenses();
+  const { data: settingsData } = useRestaurantSettings();
 
   // Real-time: refresh orders on any insert/update/delete
   useEffect(() => {
