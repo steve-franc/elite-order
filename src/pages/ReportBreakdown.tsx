@@ -114,6 +114,22 @@ const ReportBreakdown = () => {
         setPaymentMethods(pm);
         setOrders(ordersWithItems);
       }
+
+      // Fetch menu tags and menu item categories for tag filtering
+      if (report.restaurant_id) {
+        const [tagsResult, menuResult] = await Promise.all([
+          supabase.from("menu_tags").select("*").eq("restaurant_id", report.restaurant_id),
+          supabase.from("menu_items").select("name, category").eq("restaurant_id", report.restaurant_id),
+        ]);
+        if (tagsResult.data) setMenuTags(tagsResult.data as MenuTag[]);
+        if (menuResult.data) {
+          const catMap: Record<string, string> = {};
+          menuResult.data.forEach((item: any) => {
+            if (item.category) catMap[item.name] = item.category;
+          });
+          setMenuItemCategories(catMap);
+        }
+      }
     } catch (error: any) {
       toast.error(error.message || "Failed to load report");
     } finally {
