@@ -189,6 +189,7 @@ export type Database = {
           id: string
           is_available: boolean
           is_inventory_item: boolean
+          is_public: boolean
           name: string
           per_unit_price: number | null
           pricing_unit: string | null
@@ -206,6 +207,7 @@ export type Database = {
           id?: string
           is_available?: boolean
           is_inventory_item?: boolean
+          is_public?: boolean
           name: string
           per_unit_price?: number | null
           pricing_unit?: string | null
@@ -223,6 +225,7 @@ export type Database = {
           id?: string
           is_available?: boolean
           is_inventory_item?: boolean
+          is_public?: boolean
           name?: string
           per_unit_price?: number | null
           pricing_unit?: string | null
