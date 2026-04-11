@@ -147,16 +147,49 @@ const ReportBreakdown = () => {
     );
   }
 
+  // Build tag-to-categories mapping
+  const tagCategoryMap = useMemo(() => {
+    const map: Record<string, Set<string>> = {};
+    menuTags.forEach(tag => {
+      if (!map[tag.name]) map[tag.name] = new Set();
+      map[tag.name].add(tag.category);
+    });
+    return map;
+  }, [menuTags]);
+
+  const uniqueTags = useMemo(() => Object.keys(tagCategoryMap).sort(), [tagCategoryMap]);
+
+  // Filter items by selected tag
+  const isItemInTag = (itemName: string) => {
+    if (selectedTag === "all") return true;
+    const tagCategories = tagCategoryMap[selectedTag];
+    if (!tagCategories) return false;
+    const itemCategory = menuItemCategories[itemName];
+    return itemCategory ? tagCategories.has(itemCategory) : false;
+  };
+
   // Build items breakdown
-  const itemMap: Record<string, { totalQty: number; totalRevenue: number }> = {};
+  const itemMap: Record<string, { totalQty: number; totalRevenue: number; category?: string }> = {};
   orders.forEach(order => {
     order.items.forEach(item => {
-      if (!itemMap[item.menu_item_name]) itemMap[item.menu_item_name] = { totalQty: 0, totalRevenue: 0 };
+      if (!isItemInTag(item.menu_item_name)) return;
+      if (!itemMap[item.menu_item_name]) itemMap[item.menu_item_name] = { totalQty: 0, totalRevenue: 0, category: menuItemCategories[item.menu_item_name] };
       itemMap[item.menu_item_name].totalQty += item.quantity;
       itemMap[item.menu_item_name].totalRevenue += item.subtotal;
     });
   });
   const sortedItems = Object.entries(itemMap).sort(([, a], [, b]) => b.totalRevenue - a.totalRevenue);
+
+  // Group sorted items by category
+  const itemsByCategory: Record<string, typeof sortedItems> = {};
+  sortedItems.forEach(([name, data]) => {
+    const cat = data.category || "Uncategorized";
+    if (!itemsByCategory[cat]) itemsByCategory[cat] = [];
+    itemsByCategory[cat].push([name, data]);
+  });
+
+  const filteredTotalRevenue = sortedItems.reduce((sum, [, d]) => sum + d.totalRevenue, 0);
+  const filteredTotalQty = sortedItems.reduce((sum, [, d]) => sum + d.totalQty, 0);
 
   return (
     <Layout>
