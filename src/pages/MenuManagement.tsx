@@ -198,7 +198,19 @@ const MenuManagement = () => {
     });
     setEditingItem(null);
   };
-  const groupedItems = menuItems.reduce((acc, item) => {
+  const filteredItems = useMemo(() => {
+    if (!searchQuery.trim()) return menuItems;
+    const q = searchQuery.toLowerCase();
+    return menuItems.filter(item =>
+      item.name.toLowerCase().includes(q) ||
+      (item.category && item.category.toLowerCase().includes(q)) ||
+      (item.description && item.description.toLowerCase().includes(q))
+    );
+  }, [menuItems, searchQuery]);
+
+  const isSearching = searchQuery.trim().length > 0;
+
+  const groupedItems = filteredItems.reduce((acc, item) => {
     const category = item.category || "Uncategorized";
     if (!acc[category]) acc[category] = [];
     acc[category].push(item);
@@ -212,6 +224,15 @@ const MenuManagement = () => {
     acc[category].push(item);
     return acc;
   }, {} as Record<string, MenuItem[]>);
+
+  const toggleCategory = (cat: string) => {
+    setCollapsedCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(cat)) next.delete(cat);
+      else next.add(cat);
+      return next;
+    });
+  };
 
   const generateMenuText = () => {
     let text = "📋 MENU\n\n";
