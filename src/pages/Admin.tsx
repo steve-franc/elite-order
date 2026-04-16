@@ -622,25 +622,96 @@ const Admin = () => {
                 <Calendar className="h-5 w-5 text-primary" />
                 <CardTitle className="text-lg">Fixed Monthly Expenses</CardTitle>
               </div>
-              {!editingMonthly ? (
-                <Button variant="outline" size="sm" onClick={() => { setEditingMonthly(true); setMonthlyInput(String(fixedMonthlyExpenses)); }}>
-                  Edit
-                </Button>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <Input type="number" value={monthlyInput} onChange={(e) => setMonthlyInput(e.target.value)} className="w-28 h-8" min={0} step="0.01" />
-                  <Button size="sm" onClick={saveFixedMonthlyExpenses}><Save className="h-3 w-3 mr-1" />Save</Button>
-                  <Button variant="ghost" size="sm" onClick={() => setEditingMonthly(false)}>Cancel</Button>
-                </div>
-              )}
+              <Button variant="outline" size="sm" onClick={() => {
+                setEditBills(monthlyBills.length > 0 ? [...monthlyBills] : [{ name: "", amount: 0 }]);
+                setBillsDialogOpen(true);
+              }}>
+                {monthlyBills.length > 0 ? "Edit Bills" : "Add Bills"}
+              </Button>
             </div>
             <CardDescription>
               {fixedMonthlyExpenses > 0
                 ? `₺${fixedMonthlyExpenses.toFixed(2)}/month → ₺${(fixedMonthlyExpenses / 30).toFixed(2)}/day deducted from daily profit`
-                : "Set monthly fixed costs (rent, salaries, etc.) to deduct daily from profits"}
+                : "Add your monthly fixed costs (rent, salaries, etc.) to deduct daily from profits"}
             </CardDescription>
           </CardHeader>
+          {monthlyBills.length > 0 && (
+            <CardContent>
+              <div className="space-y-1">
+                {monthlyBills.map((bill, i) => (
+                  <div key={i} className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">{bill.name}</span>
+                    <span className="font-medium">₺{bill.amount.toFixed(2)}</span>
+                  </div>
+                ))}
+                <Separator className="my-2" />
+                <div className="flex justify-between font-bold">
+                  <span>Total</span>
+                  <span>₺{fixedMonthlyExpenses.toFixed(2)}</span>
+                </div>
+              </div>
+            </CardContent>
+          )}
         </Card>
+
+        {/* Monthly Bills Dialog */}
+        <Dialog open={billsDialogOpen} onOpenChange={setBillsDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Monthly Fixed Bills</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3 max-h-[60vh] overflow-auto">
+              {editBills.map((bill, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <Input
+                    placeholder="Bill name (e.g. Rent)"
+                    value={bill.name}
+                    onChange={(e) => {
+                      const next = [...editBills];
+                      next[i] = { ...next[i], name: e.target.value };
+                      setEditBills(next);
+                    }}
+                    className="flex-1"
+                    maxLength={100}
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Amount"
+                    value={bill.amount || ""}
+                    onChange={(e) => {
+                      const next = [...editBills];
+                      next[i] = { ...next[i], amount: parseFloat(e.target.value) || 0 };
+                      setEditBills(next);
+                    }}
+                    className="w-28"
+                    min={0}
+                    step="0.01"
+                  />
+                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 hover:text-destructive" onClick={() => {
+                    setEditBills(editBills.filter((_, idx) => idx !== i));
+                  }}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              <Button variant="outline" size="sm" className="w-full" onClick={() => setEditBills([...editBills, { name: "", amount: 0 }])}>
+                <Plus className="h-4 w-4 mr-1" /> Add Bill
+              </Button>
+              <Separator />
+              <div className="flex justify-between font-bold">
+                <span>Total</span>
+                <span>₺{editBills.reduce((s, b) => s + b.amount, 0).toFixed(2)}</span>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setBillsDialogOpen(false)}>Cancel</Button>
+              <Button onClick={() => {
+                const valid = editBills.filter(b => b.name.trim() && b.amount > 0);
+                saveMonthlyBills(valid);
+              }}>Save Bills</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Profit Margin Threshold */}
         <Card className="border-primary/20">
