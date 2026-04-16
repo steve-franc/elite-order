@@ -142,7 +142,7 @@ const Admin = () => {
     if (!restaurantId) return;
     const { data } = await supabase
       .from("restaurant_settings")
-      .select("fixed_daily_bills, payment_methods, fixed_monthly_expenses, profit_margin_threshold")
+      .select("fixed_daily_bills, payment_methods, fixed_monthly_expenses, profit_margin_threshold, monthly_bills")
       .eq("restaurant_id", restaurantId)
       .maybeSingle();
     if (data) {
