@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { Shield, Users, ShoppingBag, TrendingUp, Calendar, AlertCircle, UserMinus, Target, Save, Link2, Copy, Check, Tag, Plus, X, Settings } from "lucide-react";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
