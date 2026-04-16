@@ -81,6 +81,9 @@ const Admin = () => {
   const [fixedMonthlyExpenses, setFixedMonthlyExpenses] = useState<number>(0);
   const [editingMonthly, setEditingMonthly] = useState(false);
   const [monthlyInput, setMonthlyInput] = useState("");
+  const [monthlyBills, setMonthlyBills] = useState<{ name: string; amount: number }[]>([]);
+  const [billsDialogOpen, setBillsDialogOpen] = useState(false);
+  const [editBills, setEditBills] = useState<{ name: string; amount: number }[]>([]);
   const [profitMarginThreshold, setProfitMarginThreshold] = useState<number>(20);
   const [editingThreshold, setEditingThreshold] = useState(false);
   const [thresholdInput, setThresholdInput] = useState("");
@@ -147,9 +150,26 @@ const Admin = () => {
       setConfiguredPaymentMethods(parsePaymentMethods(data.payment_methods));
       setFixedMonthlyExpenses(Number((data as any).fixed_monthly_expenses) || 0);
       setMonthlyInput(String((data as any).fixed_monthly_expenses || 0));
+      const bills = (data as any).monthly_bills;
+      setMonthlyBills(Array.isArray(bills) ? bills : []);
       setProfitMarginThreshold(Number((data as any).profit_margin_threshold) || 20);
       setThresholdInput(String((data as any).profit_margin_threshold || 20));
     }
+  };
+
+  const saveMonthlyBills = async (bills: { name: string; amount: number }[]) => {
+    if (!restaurantId) return;
+    const total = bills.reduce((s, b) => s + b.amount, 0);
+    const { error } = await supabase
+      .from("restaurant_settings")
+      .update({ fixed_monthly_expenses: total, monthly_bills: bills } as any)
+      .eq("restaurant_id", restaurantId);
+    if (error) { toast.error("Failed to save"); return; }
+    setMonthlyBills(bills);
+    setFixedMonthlyExpenses(total);
+    setMonthlyInput(String(total));
+    setBillsDialogOpen(false);
+    toast.success("Monthly bills updated");
   };
 
   const saveFixedMonthlyExpenses = async () => {
