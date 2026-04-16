@@ -345,7 +345,9 @@ export type Database = {
           created_at: string
           currency: string
           customer_email: string | null
+          customer_location: string | null
           customer_name: string | null
+          customer_phone: string | null
           discount_amount: number
           edited_at: string | null
           id: string
@@ -362,7 +364,9 @@ export type Database = {
           created_at?: string
           currency?: string
           customer_email?: string | null
+          customer_location?: string | null
           customer_name?: string | null
+          customer_phone?: string | null
           discount_amount?: number
           edited_at?: string | null
           id?: string
@@ -379,7 +383,9 @@ export type Database = {
           created_at?: string
           currency?: string
           customer_email?: string | null
+          customer_location?: string | null
           customer_name?: string | null
+          customer_phone?: string | null
           discount_amount?: number
           edited_at?: string | null
           id?: string
@@ -454,6 +460,7 @@ export type Database = {
           fixed_daily_bills: number
           fixed_monthly_expenses: number
           id: string
+          monthly_bills: Json | null
           payment_methods: Json
           profit_margin_threshold: number
           restaurant_id: string | null
@@ -467,6 +474,7 @@ export type Database = {
           fixed_daily_bills?: number
           fixed_monthly_expenses?: number
           id?: string
+          monthly_bills?: Json | null
           payment_methods?: Json
           profit_margin_threshold?: number
           restaurant_id?: string | null
@@ -480,6 +488,7 @@ export type Database = {
           fixed_daily_bills?: number
           fixed_monthly_expenses?: number
           id?: string
+          monthly_bills?: Json | null
           payment_methods?: Json
           profit_margin_threshold?: number
           restaurant_id?: string | null
@@ -658,20 +667,37 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      create_public_order: {
-        Args: {
-          _customer_email: string
-          _customer_name: string
-          _items: Json
-          _notes: string
-          _payment_method: string
-          _restaurant_id: string
-        }
-        Returns: {
-          id: string
-          order_number: string
-        }[]
-      }
+      create_public_order:
+        | {
+            Args: {
+              _customer_email: string
+              _customer_location: string
+              _customer_name: string
+              _customer_phone: string
+              _items: Json
+              _notes: string
+              _payment_method: string
+              _restaurant_id: string
+            }
+            Returns: {
+              id: string
+              order_number: string
+            }[]
+          }
+        | {
+            Args: {
+              _customer_email: string
+              _customer_name: string
+              _items: Json
+              _notes: string
+              _payment_method: string
+              _restaurant_id: string
+            }
+            Returns: {
+              id: string
+              order_number: string
+            }[]
+          }
       current_restaurant_id: { Args: { _user_id: string }; Returns: string }
       get_next_order_number: {
         Args: { _restaurant_id: string }
