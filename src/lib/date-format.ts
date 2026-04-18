@@ -35,3 +35,19 @@ function getOrdinalSuffix(day: number): string {
     default: return "th";
   }
 }
+
+/** Number of days in the month of the given date (defaults to today). */
+export function daysInMonth(date?: Date | string): number {
+  const d = !date ? new Date() : typeof date === "string" ? new Date(date) : date;
+  return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+}
+
+/**
+ * Daily portion of a fixed monthly cost,
+ * based on the number of days in the month of `ref` (default: today).
+ * Daily bills target = monthlyTotal / daysInMonth.
+ */
+export function dailyShareOfMonthly(monthlyTotal: number, ref?: Date | string): number {
+  const days = daysInMonth(ref);
+  return days ? monthlyTotal / days : 0;
+}

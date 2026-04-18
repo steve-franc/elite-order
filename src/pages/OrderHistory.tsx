@@ -6,9 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Receipt, Calendar, TrendingUp, Edit, Trash2, Archive, Printer, Clock, DollarSign, CheckCircle, XCircle, Globe } from "lucide-react";
+import { Receipt, Calendar, TrendingUp, Edit, Trash2, Archive, Printer, Clock, DollarSign, CheckCircle, XCircle, Globe, Wallet, AlertTriangle } from "lucide-react";
 import { format, parseISO } from "date-fns";
-import { formatDateFull } from "@/lib/date-format";
+import { formatDateFull, dailyShareOfMonthly } from "@/lib/date-format";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatPrice } from "@/lib/currency";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -37,6 +37,7 @@ interface Order {
   is_public_order?: boolean;
   customer_name?: string | null;
   status?: string;
+  payment_status?: string;
 }
 interface OrderItem {
   id: string;
@@ -107,6 +108,7 @@ const OrderHistory = () => {
   const { data: menuTags = [] } = useMenuTags();
   const { data: allMenuItems = [] } = useMenuItems();
   const [selectedTag, setSelectedTag] = useState<string>("all");
+  const [paymentFilter, setPaymentFilter] = useState<"all" | "paid" | "unpaid">("all");
   const [orderItemsMap, setOrderItemsMap] = useState<Record<string, string[]>>({});
 
   // Build set of categories for the selected tag
@@ -151,10 +153,14 @@ const OrderHistory = () => {
     }
   }, [selectedTag, recentOrdersRaw, archivedOrders]);
 
-  // Filter orders by selected tag (via category)
-  const filterOrdersByTag = (orders: Order[]) => {
-    if (selectedTag === "all" || !taggedCategories || taggedCategories.size === 0) return orders;
-    return orders.filter(order => {
+  // Filter orders by selected tag (via category) AND payment status
+  const filterOrders = (orders: Order[]) => {
+    let result = orders;
+    if (paymentFilter !== "all") {
+      result = result.filter(o => (o.payment_status || "paid") === paymentFilter);
+    }
+    if (selectedTag === "all" || !taggedCategories || taggedCategories.size === 0) return result;
+    return result.filter(order => {
       const itemIds = orderItemsMap[order.id] || [];
       return itemIds.some(id => {
         const cat = menuItemCategoryMap[id];
@@ -163,8 +169,22 @@ const OrderHistory = () => {
     });
   };
 
-  const filteredRecentOrders = useMemo(() => filterOrdersByTag(recentOrders), [recentOrders, selectedTag, orderItemsMap, menuItemCategoryMap, taggedCategories]);
-  const filteredArchivedOrders = useMemo(() => filterOrdersByTag(archivedOrders), [archivedOrders, selectedTag, orderItemsMap, menuItemCategoryMap, taggedCategories]);
+  const filteredRecentOrders = useMemo(() => filterOrders(recentOrders), [recentOrders, selectedTag, paymentFilter, orderItemsMap, menuItemCategoryMap, taggedCategories]);
+  const filteredArchivedOrders = useMemo(() => filterOrders(archivedOrders), [archivedOrders, selectedTag, paymentFilter, orderItemsMap, menuItemCategoryMap, taggedCategories]);
+
+  const togglePaymentStatus = async (order: Order) => {
+    const next = (order.payment_status || "paid") === "paid" ? "unpaid" : "paid";
+    const { error } = await supabase
+      .from("orders")
+      .update({ payment_status: next } as any)
+      .eq("id", order.id);
+    if (error) {
+      toast.error("Failed to update payment status");
+      return;
+    }
+    toast.success(next === "paid" ? "Marked as paid" : "Marked as unpaid");
+    invalidateOrders();
+  };
 
   // Group daily reports by month or year
   const groupedReports = useMemo(() => {
@@ -357,9 +377,11 @@ const OrderHistory = () => {
   const renderOrderCard = (order: Order) => {
     const isPending = order.status === 'pending';
     const isOnline = order.is_public_order;
+    const paymentStatus = order.payment_status || 'paid';
+    const isUnpaid = paymentStatus === 'unpaid';
 
     return (
-      <Card key={order.id} className={`hover:shadow-md transition-shadow ${isPending ? 'border-yellow-500/50 bg-yellow-500/5' : ''}`}>
+      <Card key={order.id} className={`hover:shadow-md transition-shadow ${isPending ? 'border-yellow-500/50 bg-yellow-500/5' : isUnpaid ? 'border-destructive/40' : ''}`}>
         <CardHeader>
           <div className="flex items-start justify-between">
             <div className="space-y-1 flex-1">
@@ -376,6 +398,12 @@ const OrderHistory = () => {
                 )}
                 {isPending && (
                   <Badge className="bg-yellow-500 text-yellow-950 font-medium">Pending</Badge>
+                )}
+                {!isPending && isUnpaid && (
+                  <Badge variant="destructive" className="font-medium gap-1">
+                    <AlertTriangle className="h-3 w-3" />
+                    Unpaid
+                  </Badge>
                 )}
               </CardTitle>
               <CardDescription className="flex items-center gap-2">
@@ -407,7 +435,17 @@ const OrderHistory = () => {
                   </Button>
                 </div>
               ) : (
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap justify-end">
+                  <Button
+                    variant={isUnpaid ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => togglePaymentStatus(order)}
+                    title={isUnpaid ? "Mark as paid" : "Mark as unpaid"}
+                    className="gap-1"
+                  >
+                    <Wallet className="h-4 w-4" />
+                    {isUnpaid ? "Mark paid" : "Unpaid?"}
+                  </Button>
                   <Button variant="outline" size="sm" onClick={() => navigate(`/receipt/${order.id}`)}>
                     <Receipt className="h-4 w-4" />
                   </Button>
@@ -470,32 +508,47 @@ const OrderHistory = () => {
           </Card>}
 
         {!loading && (recentOrders.length > 0 || archivedOrders.length > 0 || dailyReports.length > 0) && <Tabs defaultValue="recent" className="space-y-4">
-            {/* Tag Filter */}
-            {menuTags.length > 0 && (() => {
-              const uniqueNames = [...new Set((menuTags as any[]).map(t => t.name))].sort();
-              return (
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Filter by tag:</span>
-                  <Badge
-                    variant={selectedTag === "all" ? "default" : "outline"}
-                    className="cursor-pointer select-none"
-                    onClick={() => setSelectedTag("all")}
-                  >
-                    All
-                  </Badge>
-                  {uniqueNames.map((name: string) => (
+            {/* Tag + Payment Filters */}
+            <div className="flex flex-col gap-3">
+              {menuTags.length > 0 && (() => {
+                const uniqueNames = [...new Set((menuTags as any[]).map(t => t.name))].sort();
+                return (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Filter by tag:</span>
                     <Badge
-                      key={name}
-                      variant={selectedTag === name ? "default" : "outline"}
+                      variant={selectedTag === "all" ? "default" : "outline"}
                       className="cursor-pointer select-none"
-                      onClick={() => setSelectedTag(name)}
+                      onClick={() => setSelectedTag("all")}
                     >
-                      {name}
+                      All
                     </Badge>
-                  ))}
-                </div>
-              );
-            })()}
+                    {uniqueNames.map((name: string) => (
+                      <Badge
+                        key={name}
+                        variant={selectedTag === name ? "default" : "outline"}
+                        className="cursor-pointer select-none"
+                        onClick={() => setSelectedTag(name)}
+                      >
+                        {name}
+                      </Badge>
+                    ))}
+                  </div>
+                );
+              })()}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm text-muted-foreground">Payment:</span>
+                {(["all", "paid", "unpaid"] as const).map(opt => (
+                  <Badge
+                    key={opt}
+                    variant={paymentFilter === opt ? "default" : "outline"}
+                    className="cursor-pointer select-none capitalize"
+                    onClick={() => setPaymentFilter(opt)}
+                  >
+                    {opt}
+                  </Badge>
+                ))}
+              </div>
+            </div>
 
             <TabsList>
               <TabsTrigger value="recent" className="flex items-center gap-2">
@@ -644,7 +697,7 @@ const OrderHistory = () => {
 
           {dailyReport && (() => {
             const totalExp = (expensesData as any[]).reduce((s: number, e: any) => s + Number(e.amount), 0);
-            const dailyFixed = Number((settingsData as any)?.fixed_monthly_expenses || 0) / 30;
+            const dailyFixed = dailyShareOfMonthly(Number((settingsData as any)?.fixed_monthly_expenses || 0));
             const totalDeductions = totalExp + dailyFixed;
             const netProfit = dailyReport.total_revenue - totalDeductions;
             const margin = dailyReport.total_revenue > 0 ? (netProfit / dailyReport.total_revenue) * 100 : 0;
