@@ -454,7 +454,7 @@ const Admin = () => {
       const { error } = await supabase.from("user_roles").insert([
         {
           user_id: userId,
-          role: newRole as "server" | "ops" | "counter" | "manager",
+          role: newRole as "server" | "ops" | "counter" | "manager" | "investor",
           restaurant_id: restaurantId,
         },
       ]);
