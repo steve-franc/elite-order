@@ -153,10 +153,14 @@ const OrderHistory = () => {
     }
   }, [selectedTag, recentOrdersRaw, archivedOrders]);
 
-  // Filter orders by selected tag (via category)
-  const filterOrdersByTag = (orders: Order[]) => {
-    if (selectedTag === "all" || !taggedCategories || taggedCategories.size === 0) return orders;
-    return orders.filter(order => {
+  // Filter orders by selected tag (via category) AND payment status
+  const filterOrders = (orders: Order[]) => {
+    let result = orders;
+    if (paymentFilter !== "all") {
+      result = result.filter(o => (o.payment_status || "paid") === paymentFilter);
+    }
+    if (selectedTag === "all" || !taggedCategories || taggedCategories.size === 0) return result;
+    return result.filter(order => {
       const itemIds = orderItemsMap[order.id] || [];
       return itemIds.some(id => {
         const cat = menuItemCategoryMap[id];
@@ -165,8 +169,22 @@ const OrderHistory = () => {
     });
   };
 
-  const filteredRecentOrders = useMemo(() => filterOrdersByTag(recentOrders), [recentOrders, selectedTag, orderItemsMap, menuItemCategoryMap, taggedCategories]);
-  const filteredArchivedOrders = useMemo(() => filterOrdersByTag(archivedOrders), [archivedOrders, selectedTag, orderItemsMap, menuItemCategoryMap, taggedCategories]);
+  const filteredRecentOrders = useMemo(() => filterOrders(recentOrders), [recentOrders, selectedTag, paymentFilter, orderItemsMap, menuItemCategoryMap, taggedCategories]);
+  const filteredArchivedOrders = useMemo(() => filterOrders(archivedOrders), [archivedOrders, selectedTag, paymentFilter, orderItemsMap, menuItemCategoryMap, taggedCategories]);
+
+  const togglePaymentStatus = async (order: Order) => {
+    const next = (order.payment_status || "paid") === "paid" ? "unpaid" : "paid";
+    const { error } = await supabase
+      .from("orders")
+      .update({ payment_status: next } as any)
+      .eq("id", order.id);
+    if (error) {
+      toast.error("Failed to update payment status");
+      return;
+    }
+    toast.success(next === "paid" ? "Marked as paid" : "Marked as unpaid");
+    invalidateOrders();
+  };
 
   // Group daily reports by month or year
   const groupedReports = useMemo(() => {
