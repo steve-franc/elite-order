@@ -377,9 +377,11 @@ const OrderHistory = () => {
   const renderOrderCard = (order: Order) => {
     const isPending = order.status === 'pending';
     const isOnline = order.is_public_order;
+    const paymentStatus = order.payment_status || 'paid';
+    const isUnpaid = paymentStatus === 'unpaid';
 
     return (
-      <Card key={order.id} className={`hover:shadow-md transition-shadow ${isPending ? 'border-yellow-500/50 bg-yellow-500/5' : ''}`}>
+      <Card key={order.id} className={`hover:shadow-md transition-shadow ${isPending ? 'border-yellow-500/50 bg-yellow-500/5' : isUnpaid ? 'border-destructive/40' : ''}`}>
         <CardHeader>
           <div className="flex items-start justify-between">
             <div className="space-y-1 flex-1">
@@ -396,6 +398,12 @@ const OrderHistory = () => {
                 )}
                 {isPending && (
                   <Badge className="bg-yellow-500 text-yellow-950 font-medium">Pending</Badge>
+                )}
+                {!isPending && isUnpaid && (
+                  <Badge variant="destructive" className="font-medium gap-1">
+                    <AlertTriangle className="h-3 w-3" />
+                    Unpaid
+                  </Badge>
                 )}
               </CardTitle>
               <CardDescription className="flex items-center gap-2">
@@ -427,7 +435,17 @@ const OrderHistory = () => {
                   </Button>
                 </div>
               ) : (
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap justify-end">
+                  <Button
+                    variant={isUnpaid ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => togglePaymentStatus(order)}
+                    title={isUnpaid ? "Mark as paid" : "Mark as unpaid"}
+                    className="gap-1"
+                  >
+                    <Wallet className="h-4 w-4" />
+                    {isUnpaid ? "Mark paid" : "Unpaid?"}
+                  </Button>
                   <Button variant="outline" size="sm" onClick={() => navigate(`/receipt/${order.id}`)}>
                     <Receipt className="h-4 w-4" />
                   </Button>
