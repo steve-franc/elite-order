@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { BarChart3, TrendingUp, TrendingDown, Users, Calendar } from "lucide-react";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subWeeks, subMonths, isWithinInterval } from "date-fns";
 import { formatPrice } from "@/lib/currency";
-import { formatDateFull, formatDateShort } from "@/lib/date-format";
+import { formatDateFull, formatDateShort, daysInMonth, dailyShareOfMonthly } from "@/lib/date-format";
 import { useRestaurantContext } from "@/hooks/useRestaurantContext";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Navigate, useNavigate } from "react-router-dom";
@@ -38,7 +38,7 @@ interface OrderData {
 const Reports = () => {
   const navigate = useNavigate();
   const { restaurantId, loading: restaurantLoading } = useRestaurantContext();
-  const { isManager, loading: roleLoading } = useUserRole();
+  const { isManager, isInvestor, canViewReports, loading: roleLoading } = useUserRole();
   const [period, setPeriod] = useState<"week" | "month">("week");
   const [offset, setOffset] = useState(0); // 0 = current, 1 = last, etc.
   const [reports, setReports] = useState<ReportData[]>([]);
@@ -97,8 +97,12 @@ const Reports = () => {
 
   const totalRevenue = orders.reduce((s, o) => s + Number(o.total), 0);
   const totalExpenses = expenses.reduce((s, e) => s + Number(e.amount), 0);
-  const days = period === "week" ? 7 : new Date(dateRange.start.getFullYear(), dateRange.start.getMonth() + 1, 0).getDate();
-  const fixedDeduction = period === "month" ? fixedMonthlyExpenses : (fixedMonthlyExpenses / 30) * days;
+  // Use actual days in the reference month for daily share of fixed monthly bills.
+  const refMonth = dateRange.start;
+  const days = period === "week" ? 7 : daysInMonth(refMonth);
+  const fixedDeduction = period === "month"
+    ? fixedMonthlyExpenses
+    : dailyShareOfMonthly(fixedMonthlyExpenses, refMonth) * days;
   const totalDeductions = totalExpenses + fixedDeduction;
   const netProfit = totalRevenue - totalDeductions;
   const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
@@ -134,7 +138,7 @@ const Reports = () => {
   if (roleLoading || restaurantLoading) {
     return <Layout><div className="flex items-center justify-center min-h-[60vh]"><p className="text-muted-foreground">Loading...</p></div></Layout>;
   }
-  if (!isManager) return <Navigate to="/" replace />;
+  if (!canViewReports) return <Navigate to="/" replace />;
 
   return (
     <Layout>
