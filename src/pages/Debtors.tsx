@@ -9,10 +9,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Check, X, Users, AlertCircle, Pencil } from "lucide-react";
+import { Plus, Check, X, Users, AlertCircle, Pencil, Search } from "lucide-react";
 import { formatPrice } from "@/lib/currency";
 import { useRestaurantContext } from "@/hooks/useRestaurantContext";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Debtor {
   id: string;
@@ -38,6 +39,8 @@ const Debtors = () => {
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [showResolved, setShowResolved] = useState(false);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "unpaid" | "paid">("all");
 
   useEffect(() => {
     if (restaurantId) fetchDebtors();
@@ -141,9 +144,18 @@ const Debtors = () => {
     fetchDebtors();
   };
 
-  const unresolvedDebtors = debtors.filter(d => !d.is_resolved);
-  const resolvedDebtors = debtors.filter(d => d.is_resolved);
+  const matchesSearch = (d: Debtor) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return d.customer_name.toLowerCase().includes(q);
+  };
+
+  const filteredAll = debtors.filter(matchesSearch);
+  const unresolvedDebtors = filteredAll.filter(d => !d.is_resolved);
+  const resolvedDebtors = filteredAll.filter(d => d.is_resolved);
   const totalOwed = unresolvedDebtors.reduce((s, d) => s + Number(d.amount_owed), 0);
+  const showUnpaid = statusFilter !== "paid";
+  const showPaid = statusFilter !== "unpaid";
 
   if (restaurantLoading || loading) {
     return (
