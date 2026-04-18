@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { supabase } from "@/integrations/supabase/client";
 import type { User } from "@supabase/supabase-js";
 
-export type UserRole = "server" | "ops" | "counter" | "manager" | null;
+export type UserRole = "server" | "ops" | "counter" | "manager" | "investor" | null;
 
 interface RestaurantRoleState {
   user: User | null;
@@ -16,6 +16,9 @@ interface RestaurantRoleState {
   isOps: boolean;
   isCounter: boolean;
   isServer: boolean;
+  isInvestor: boolean;
+  /** True when role can view reports/admin (manager OR investor) */
+  canViewReports: boolean;
 }
 
 const RestaurantRoleContext = createContext<RestaurantRoleState>({
@@ -30,6 +33,8 @@ const RestaurantRoleContext = createContext<RestaurantRoleState>({
   isOps: false,
   isCounter: false,
   isServer: false,
+  isInvestor: false,
+  canViewReports: false,
 });
 
 export function RestaurantRoleProvider({ children }: { children: ReactNode }) {
@@ -163,6 +168,9 @@ export function RestaurantRoleProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  const isManager = role === "manager";
+  const isInvestor = role === "investor";
+
   const value: RestaurantRoleState = {
     user,
     restaurantId,
@@ -171,10 +179,12 @@ export function RestaurantRoleProvider({ children }: { children: ReactNode }) {
     authLoading,
     loading,
     hasRole: role !== null,
-    isManager: role === "manager",
+    isManager,
     isOps: role === "ops",
     isCounter: role === "counter",
     isServer: role === "server",
+    isInvestor,
+    canViewReports: isManager || isInvestor,
   };
 
   return (
@@ -209,6 +219,8 @@ export function useUserRole() {
     isOps: ctx.isOps,
     isCounter: ctx.isCounter,
     isServer: ctx.isServer,
+    isInvestor: ctx.isInvestor,
+    canViewReports: ctx.canViewReports,
   };
 }
 
