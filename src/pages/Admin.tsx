@@ -593,11 +593,13 @@ const Admin = () => {
                 <Target className="h-5 w-5 text-primary" />
                 <CardTitle className="text-lg">Daily Bills Target</CardTitle>
               </div>
-              {!editingBills ? (
+              {!readOnly && !editingBills && (
                 <Button variant="outline" size="sm" onClick={() => { setEditingBills(true); setBillsInput(String(fixedDailyBills)); }}>
                   Edit
                 </Button>
-              ) : (
+              )}
+              {!readOnly && editingBills ? null : null}
+              {readOnly ? null : !editingBills ? null : (
                 <div className="flex items-center gap-2">
                   <Input
                     type="number"
@@ -649,12 +651,14 @@ const Admin = () => {
                 <Calendar className="h-5 w-5 text-primary" />
                 <CardTitle className="text-lg">Fixed Monthly Expenses</CardTitle>
               </div>
-              <Button variant="outline" size="sm" onClick={() => {
-                setEditBills(monthlyBills.length > 0 ? [...monthlyBills] : [{ name: "", amount: 0 }]);
-                setBillsDialogOpen(true);
-              }}>
-                {monthlyBills.length > 0 ? "Edit Bills" : "Add Bills"}
-              </Button>
+              {!readOnly && (
+                <Button variant="outline" size="sm" onClick={() => {
+                  setEditBills(monthlyBills.length > 0 ? [...monthlyBills] : [{ name: "", amount: 0 }]);
+                  setBillsDialogOpen(true);
+                }}>
+                  {monthlyBills.length > 0 ? "Edit Bills" : "Add Bills"}
+                </Button>
+              )}
             </div>
             <CardDescription>
               {fixedMonthlyExpenses > 0
@@ -748,11 +752,12 @@ const Admin = () => {
                 <AlertCircle className="h-5 w-5 text-primary" />
                 <CardTitle className="text-lg">Low Profit Alert Threshold</CardTitle>
               </div>
-              {!editingThreshold ? (
+              {!readOnly && !editingThreshold && (
                 <Button variant="outline" size="sm" onClick={() => { setEditingThreshold(true); setThresholdInput(String(profitMarginThreshold)); }}>
                   Edit
                 </Button>
-              ) : (
+              )}
+              {!readOnly && editingThreshold && (
                 <div className="flex items-center gap-2">
                   <Input type="number" value={thresholdInput} onChange={(e) => setThresholdInput(e.target.value)} className="w-20 h-8" min={0} max={100} step="1" />
                   <span className="text-sm">%</span>
@@ -842,29 +847,35 @@ const Admin = () => {
                         {method.account_number ? ` · Acct: ${method.account_number}` : ""}
                       </p>
                     </div>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditMethod(method)}>
-                      <Settings className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onClick={() => removePaymentMethod(method.name)}>
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
+                    {!readOnly && (
+                      <>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditMethod(method)}>
+                          <Settings className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onClick={() => removePaymentMethod(method.name)}>
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>
-              <div className="flex items-center gap-2">
-                <Input
-                  placeholder="New payment method..."
-                  value={newPaymentMethod}
-                  onChange={(e) => setNewPaymentMethod(e.target.value)}
-                  className="max-w-xs"
-                  maxLength={50}
-                  onKeyDown={(e) => e.key === "Enter" && addPaymentMethod()}
-                />
-                <Button size="sm" onClick={addPaymentMethod} disabled={!newPaymentMethod.trim()}>
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add
-                </Button>
-              </div>
+              {!readOnly && (
+                <div className="flex items-center gap-2">
+                  <Input
+                    placeholder="New payment method..."
+                    value={newPaymentMethod}
+                    onChange={(e) => setNewPaymentMethod(e.target.value)}
+                    className="max-w-xs"
+                    maxLength={50}
+                    onKeyDown={(e) => e.key === "Enter" && addPaymentMethod()}
+                  />
+                  <Button size="sm" onClick={addPaymentMethod} disabled={!newPaymentMethod.trim()}>
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add
+                  </Button>
+                </div>
+              )}
             </CardContent>
 
             {/* Edit payment method dialog */}
