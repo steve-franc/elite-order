@@ -779,7 +779,23 @@ const Admin = () => {
                 Share this link with customers so they can order directly from your menu — no sign-in required.
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div className="space-y-0.5 pr-3">
+                  <Label className="text-sm font-medium">Accept public orders</Label>
+                  <p className="text-xs text-muted-foreground">
+                    {allowPublicOrders
+                      ? "Customers can place orders via the link below."
+                      : "The public order page is currently disabled for customers."}
+                  </p>
+                </div>
+                <Switch
+                  checked={allowPublicOrders}
+                  onCheckedChange={togglePublicOrders}
+                  disabled={readOnly || savingPublicOrders}
+                  aria-label="Toggle public ordering"
+                />
+              </div>
               <div className="flex items-center gap-2">
                 <Input
                   readOnly
