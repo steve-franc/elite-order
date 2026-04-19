@@ -934,6 +934,7 @@ const Admin = () => {
                                 <SelectItem value="ops">Ops</SelectItem>
                                 <SelectItem value="counter">Counter</SelectItem>
                                 <SelectItem value="manager">Manager</SelectItem>
+                                <SelectItem value="investor">Observer</SelectItem>
                               </SelectContent>
                             </Select>
                             <AlertDialog>
