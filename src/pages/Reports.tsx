@@ -10,6 +10,7 @@ import { BarChart3, TrendingUp, TrendingDown, Users, Calendar } from "lucide-rea
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subWeeks, subMonths, isWithinInterval } from "date-fns";
 import { formatPrice } from "@/lib/currency";
 import { formatDateFull, formatDateShort, daysInMonth, dailyShareOfMonthly } from "@/lib/date-format";
+import { sumPaidRevenue, sumUnpaidRevenue, dailyBillsTarget } from "@/lib/revenue";
 import { useRestaurantContext } from "@/hooks/useRestaurantContext";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Navigate, useNavigate } from "react-router-dom";
