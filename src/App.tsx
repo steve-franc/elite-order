@@ -96,6 +96,7 @@ const PublicOnlyRoute = ({ children }: { children: React.ReactNode }) => {
 
 const App = () => {
   useTimeBasedTheme();
+  useAutoEndDay();
   return (
   <QueryClientProvider client={queryClient}>
     <RestaurantRoleProvider>
