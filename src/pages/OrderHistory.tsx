@@ -302,31 +302,24 @@ const OrderHistory = () => {
         items: itemsData?.filter(item => item.order_id === order.id) || []
       }));
 
-      // Calculate totals
-      const totalRevenue = ordersData.reduce((sum, order) => sum + Number(order.total), 0);
-      const paymentMethods: Record<string, {
-        count: number;
-        total: number;
-      }> = {};
-      ordersData.forEach(order => {
+      // Calculate totals — only PAID orders count toward revenue
+      const paidOrders = ordersData.filter((o: any) => (o.payment_status || 'paid') === 'paid');
+      const totalRevenue = paidOrders.reduce((sum: number, order: any) => sum + Number(order.total), 0);
+      const paymentMethods: Record<string, { count: number; total: number }> = {};
+      paidOrders.forEach((order: any) => {
         if (!paymentMethods[order.payment_method]) {
-          paymentMethods[order.payment_method] = {
-            count: 0,
-            total: 0
-          };
+          paymentMethods[order.payment_method] = { count: 0, total: 0 };
         }
         paymentMethods[order.payment_method].count++;
         paymentMethods[order.payment_method].total += Number(order.total);
       });
 
       // Save daily report - use insert (not upsert) to allow multiple reports per day
-      const {
-        error: reportError
-      } = await supabase.from("daily_reports").insert({
+      const { error: reportError } = await supabase.from("daily_reports").insert({
         staff_id: user.id,
         restaurant_id: restaurantId,
         report_date: today,
-        total_orders: ordersData.length,
+        total_orders: paidOrders.length,
         total_revenue: totalRevenue,
         payment_methods: paymentMethods
       });
@@ -334,7 +327,7 @@ const OrderHistory = () => {
 
       // Set report data and show dialog
       setDailyReport({
-        total_orders: ordersData.length,
+        total_orders: paidOrders.length,
         total_revenue: totalRevenue,
         payment_methods: paymentMethods,
         orders: ordersWithItems
