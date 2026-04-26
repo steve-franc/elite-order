@@ -498,11 +498,15 @@ const OrderHistory = () => {
                   <CardTitle className="text-lg">Current Period Revenue</CardTitle>
                 </div>
                 <p className="text-3xl font-bold text-primary">
-                  {formatPrice(recentOrders.filter(o => o.status === 'confirmed').reduce((sum, order) => sum + Number(order.total), 0))}
+                  {formatPrice(sumPaidRevenue(recentOrders as any))}
                 </p>
               </div>
               <CardDescription>
-                {recentOrders.filter(o => o.status === 'confirmed').length} confirmed order{recentOrders.filter(o => o.status === 'confirmed').length !== 1 ? 's' : ''} since {lastEndDayDate ? formatDateFull(lastEndDayDate) : "start"}
+                {recentOrders.filter(o => o.status === 'confirmed' && (o.payment_status || 'paid') === 'paid').length} paid order(s)
+                {sumUnpaidRevenue(recentOrders as any) > 0 && (
+                  <span className="text-destructive"> • {formatPrice(sumUnpaidRevenue(recentOrders as any))} unpaid (deducted)</span>
+                )}
+                {' '}since {lastEndDayDate ? formatDateFull(lastEndDayDate) : "start"}
               </CardDescription>
             </CardHeader>
           </Card>
