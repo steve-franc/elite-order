@@ -656,20 +656,21 @@ const Admin = () => {
             </CardDescription>
           </CardHeader>
           {fixedMonthlyExpenses > 0 && (() => {
-            const dailyTarget = fixedMonthlyExpenses / 30;
+            const dailyTarget = dailyBillsTarget(fixedMonthlyExpenses);
+            const progressRevenue = todayPaidRevenue;
             return (
               <CardContent className="space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Revenue vs Daily Bills</span>
+                  <span className="text-muted-foreground">Paid Revenue vs Daily Bills</span>
                   <span className="font-medium">
-                    {formatPrice(todayRevenue, todayOrders[0]?.currency || 'TRY')} / {formatPrice(dailyTarget, todayOrders[0]?.currency || 'TRY')}
+                    {formatPrice(progressRevenue, 'TRY')} / {formatPrice(dailyTarget, 'TRY')}
                   </span>
                 </div>
-                <Progress value={Math.min(100, (todayRevenue / dailyTarget) * 100)} className="h-4" />
-                <p className={`text-sm font-medium ${todayRevenue >= dailyTarget ? "text-green-600" : "text-amber-600"}`}>
-                  {todayRevenue >= dailyTarget
-                    ? `✓ Bills covered! ${formatPrice(todayRevenue - dailyTarget, todayOrders[0]?.currency || 'TRY')} profit`
-                    : `${formatPrice(dailyTarget - todayRevenue, todayOrders[0]?.currency || 'TRY')} more needed`}
+                <Progress value={Math.min(100, (progressRevenue / dailyTarget) * 100)} className="h-4" />
+                <p className={`text-sm font-medium ${progressRevenue >= dailyTarget ? "text-green-600" : "text-amber-600"}`}>
+                  {progressRevenue >= dailyTarget
+                    ? `✓ Bills covered! ${formatPrice(progressRevenue - dailyTarget, 'TRY')} above target`
+                    : `${formatPrice(dailyTarget - progressRevenue, 'TRY')} more needed`}
                 </p>
               </CardContent>
             );
