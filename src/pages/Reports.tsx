@@ -33,6 +33,8 @@ interface OrderData {
   total: number;
   customer_name: string | null;
   payment_method: string;
+  payment_status?: string | null;
+  status?: string | null;
   created_at: string;
 }
 
@@ -78,7 +80,7 @@ const Reports = () => {
         supabase.from("daily_expenses").select("amount, source, created_at")
           .eq("restaurant_id", restaurantId)
           .gte("created_at", startStr).lte("created_at", endStr),
-        supabase.from("orders").select("total, customer_name, payment_method, created_at")
+        supabase.from("orders").select("total, customer_name, payment_method, payment_status, status, created_at")
           .eq("restaurant_id", restaurantId).eq("status", "confirmed")
           .gte("created_at", startStr).lte("created_at", endStr),
         supabase.from("restaurant_settings").select("fixed_monthly_expenses")
@@ -96,15 +98,15 @@ const Reports = () => {
     }
   };
 
-  const totalRevenue = orders.reduce((s, o) => s + Number(o.total), 0);
+  const totalRevenue = sumPaidRevenue(orders as any);
+  const unpaidTotal = sumUnpaidRevenue(orders as any);
   const totalExpenses = expenses.reduce((s, e) => s + Number(e.amount), 0);
-  // Use actual days in the reference month for daily share of fixed monthly bills.
-  const refMonth = dateRange.start;
-  const days = period === "week" ? 7 : daysInMonth(refMonth);
+  // Daily share of monthly bills is fixed at /30 per business rule.
+  const days = period === "week" ? 7 : daysInMonth(dateRange.start);
   const fixedDeduction = period === "month"
     ? fixedMonthlyExpenses
-    : dailyShareOfMonthly(fixedMonthlyExpenses, refMonth) * days;
-  const totalDeductions = totalExpenses + fixedDeduction;
+    : dailyBillsTarget(fixedMonthlyExpenses) * days;
+  const totalDeductions = totalExpenses + fixedDeduction + unpaidTotal;
   const netProfit = totalRevenue - totalDeductions;
   const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
 
@@ -117,7 +119,9 @@ const Reports = () => {
 
   // Payment methods
   const pmBreakdown: Record<string, { count: number; total: number }> = {};
+  // Payment methods (only paid orders contribute)
   orders.forEach(o => {
+    if ((o.payment_status ?? "paid") !== "paid") return;
     if (!pmBreakdown[o.payment_method]) pmBreakdown[o.payment_method] = { count: 0, total: 0 };
     pmBreakdown[o.payment_method].count++;
     pmBreakdown[o.payment_method].total += Number(o.total);
