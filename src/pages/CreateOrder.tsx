@@ -207,46 +207,29 @@ const CreateOrder = () => {
     }
     setLoading(true);
     try {
-      const {
-        data: {
-          user
-        }
-      } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-      const total = calculateTotal();
-      const {
-        data: order,
-        error: orderError
-      } = await supabase.from("orders").insert([{
-        staff_id: user.id,
-        total,
-        payment_method: paymentMethod,
-        notes: notes || null,
-        currency: currency,
-        is_public_order: false,
-        restaurant_id: restaurantId,
-        order_number: "",
-        discount_amount: calculateDiscountAmount(),
-      }]).select().single();
-      if (orderError) throw orderError;
-      const orderItemsData = orderItems.map(item => ({
-        order_id: order.id,
+      const itemsPayload = orderItems.map(item => ({
         menu_item_id: item.menuItem.id,
-        menu_item_name: item.menuItem.name,
         quantity: item.quantity,
         extra_units: item.extraUnits,
-        base_price_at_time: item.menuItem.base_price,
-        per_unit_price_at_time: item.menuItem.per_unit_price,
-        price_at_time: item.menuItem.base_price,
-        subtotal: calculateItemTotal(item)
       }));
-      const {
-        error: itemsError
-      } = await supabase.from("order_items").insert(orderItemsData);
-      if (itemsError) throw itemsError;
-      toast.success(`Order #${order.order_number} created successfully!`);
+
+      const { data, error } = await (supabase as any).rpc("create_staff_order", {
+        _restaurant_id: restaurantId,
+        _payment_method: paymentMethod,
+        _notes: notes || null,
+        _discount_amount: calculateDiscountAmount(),
+        _customer_name: null,
+        _items: itemsPayload,
+        _payment_status: "paid",
+      });
+      if (error) throw error;
+
+      const created = Array.isArray(data) ? data[0] : data;
+      if (!created?.id) throw new Error("Order was not created");
+
+      toast.success(`Order #${created.order_number} created successfully!`);
       resetOrderState();
-      navigate(`/receipt/${order.id}`);
+      navigate(`/receipt/${created.id}`);
     } catch (error: any) {
       toast.error(error.message || "Failed to create order");
     } finally {

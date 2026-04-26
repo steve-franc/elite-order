@@ -8,6 +8,7 @@ import { useAuth, RestaurantRoleProvider } from "./hooks/useRestaurantAndRole";
 import { NotificationSound } from "./components/NotificationSound";
 import ScrollToTop from "./components/ScrollToTop";
 import { useTimeBasedTheme } from "./hooks/useTimeBasedTheme";
+import { useAutoEndDay } from "./hooks/useAutoEndDay";
 
 // Lazy-load all pages for faster initial load
 const Auth = lazy(() => import("./pages/Auth"));
@@ -95,6 +96,7 @@ const PublicOnlyRoute = ({ children }: { children: React.ReactNode }) => {
 
 const App = () => {
   useTimeBasedTheme();
+  useAutoEndDay();
   return (
   <QueryClientProvider client={queryClient}>
     <RestaurantRoleProvider>

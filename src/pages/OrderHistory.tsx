@@ -19,6 +19,8 @@ import ExpenseManager from "@/components/expenses/ExpenseManager";
 import { useOrders, useInvalidateOrders, useMenuTags, useMenuItems, useExpenses, useRestaurantSettings } from "@/hooks/useQueries";
 import { stopAlarm } from "@/components/NotificationSound";
 import { useRestaurantContext } from "@/hooks/useRestaurantContext";
+import { sumPaidRevenue, sumUnpaidRevenue } from "@/lib/revenue";
+import UnpaidOrderDialog from "@/components/UnpaidOrderDialog";
 
 interface DailyReportInfo {
   id: string;
@@ -172,17 +174,27 @@ const OrderHistory = () => {
   const filteredRecentOrders = useMemo(() => filterOrders(recentOrders), [recentOrders, selectedTag, paymentFilter, orderItemsMap, menuItemCategoryMap, taggedCategories]);
   const filteredArchivedOrders = useMemo(() => filterOrders(archivedOrders), [archivedOrders, selectedTag, paymentFilter, orderItemsMap, menuItemCategoryMap, taggedCategories]);
 
+  const [unpaidDialogOpen, setUnpaidDialogOpen] = useState(false);
+  const [unpaidTarget, setUnpaidTarget] = useState<Order | null>(null);
+
   const togglePaymentStatus = async (order: Order) => {
-    const next = (order.payment_status || "paid") === "paid" ? "unpaid" : "paid";
+    const isCurrentlyPaid = (order.payment_status || "paid") === "paid";
+    if (isCurrentlyPaid) {
+      // Going from paid → unpaid: collect debtor info first
+      setUnpaidTarget(order);
+      setUnpaidDialogOpen(true);
+      return;
+    }
+    // Going from unpaid → paid: just flip the flag
     const { error } = await supabase
       .from("orders")
-      .update({ payment_status: next } as any)
+      .update({ payment_status: "paid" } as any)
       .eq("id", order.id);
     if (error) {
       toast.error("Failed to update payment status");
       return;
     }
-    toast.success(next === "paid" ? "Marked as paid" : "Marked as unpaid");
+    toast.success("Marked as paid");
     invalidateOrders();
   };
 
@@ -290,31 +302,24 @@ const OrderHistory = () => {
         items: itemsData?.filter(item => item.order_id === order.id) || []
       }));
 
-      // Calculate totals
-      const totalRevenue = ordersData.reduce((sum, order) => sum + Number(order.total), 0);
-      const paymentMethods: Record<string, {
-        count: number;
-        total: number;
-      }> = {};
-      ordersData.forEach(order => {
+      // Calculate totals — only PAID orders count toward revenue
+      const paidOrders = ordersData.filter((o: any) => (o.payment_status || 'paid') === 'paid');
+      const totalRevenue = paidOrders.reduce((sum: number, order: any) => sum + Number(order.total), 0);
+      const paymentMethods: Record<string, { count: number; total: number }> = {};
+      paidOrders.forEach((order: any) => {
         if (!paymentMethods[order.payment_method]) {
-          paymentMethods[order.payment_method] = {
-            count: 0,
-            total: 0
-          };
+          paymentMethods[order.payment_method] = { count: 0, total: 0 };
         }
         paymentMethods[order.payment_method].count++;
         paymentMethods[order.payment_method].total += Number(order.total);
       });
 
       // Save daily report - use insert (not upsert) to allow multiple reports per day
-      const {
-        error: reportError
-      } = await supabase.from("daily_reports").insert({
+      const { error: reportError } = await supabase.from("daily_reports").insert({
         staff_id: user.id,
         restaurant_id: restaurantId,
         report_date: today,
-        total_orders: ordersData.length,
+        total_orders: paidOrders.length,
         total_revenue: totalRevenue,
         payment_methods: paymentMethods
       });
@@ -322,7 +327,7 @@ const OrderHistory = () => {
 
       // Set report data and show dialog
       setDailyReport({
-        total_orders: ordersData.length,
+        total_orders: paidOrders.length,
         total_revenue: totalRevenue,
         payment_methods: paymentMethods,
         orders: ordersWithItems
@@ -486,11 +491,15 @@ const OrderHistory = () => {
                   <CardTitle className="text-lg">Current Period Revenue</CardTitle>
                 </div>
                 <p className="text-3xl font-bold text-primary">
-                  {formatPrice(recentOrders.filter(o => o.status === 'confirmed').reduce((sum, order) => sum + Number(order.total), 0))}
+                  {formatPrice(sumPaidRevenue(recentOrders as any))}
                 </p>
               </div>
               <CardDescription>
-                {recentOrders.filter(o => o.status === 'confirmed').length} confirmed order{recentOrders.filter(o => o.status === 'confirmed').length !== 1 ? 's' : ''} since {lastEndDayDate ? formatDateFull(lastEndDayDate) : "start"}
+                {recentOrders.filter(o => o.status === 'confirmed' && (o.payment_status || 'paid') === 'paid').length} paid order(s)
+                {sumUnpaidRevenue(recentOrders as any) > 0 && (
+                  <span className="text-destructive"> • {formatPrice(sumUnpaidRevenue(recentOrders as any))} unpaid (deducted)</span>
+                )}
+                {' '}since {lastEndDayDate ? formatDateFull(lastEndDayDate) : "start"}
               </CardDescription>
             </CardHeader>
           </Card>
@@ -670,6 +679,14 @@ const OrderHistory = () => {
             </TabsContent>
           </Tabs>}
       </div>
+
+      <UnpaidOrderDialog
+        open={unpaidDialogOpen}
+        onOpenChange={setUnpaidDialogOpen}
+        order={unpaidTarget as any}
+        restaurantId={restaurantId}
+        onComplete={() => { setUnpaidTarget(null); invalidateOrders(); }}
+      />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
