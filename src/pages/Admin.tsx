@@ -346,6 +346,30 @@ const Admin = () => {
     
     setTodayOrders(ordersWithProfiles as any);
   };
+
+  const fetchTodayExpenses = async () => {
+    if (!restaurantId) {
+      setTodayExpenses([]);
+      return;
+    }
+    // Use latest daily report cutoff to mirror "today since last End Day".
+    const { data: latestReport } = await supabase
+      .from("daily_reports")
+      .select("created_at")
+      .eq("restaurant_id", restaurantId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    let q = supabase
+      .from("daily_expenses")
+      .select("amount, created_at")
+      .eq("restaurant_id", restaurantId);
+    if (latestReport?.created_at) q = q.gt("created_at", latestReport.created_at);
+
+    const { data } = await q;
+    setTodayExpenses((data || []) as any);
+  };
   const fetchStaff = async () => {
     if (!restaurantId) {
       setStaff([]);
