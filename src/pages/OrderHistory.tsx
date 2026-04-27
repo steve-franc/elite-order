@@ -508,9 +508,16 @@ const OrderHistory = () => {
             <h2 className="text-3xl font-bold">Order History</h2>
             <p className="text-muted-foreground">Manage and track all orders</p>
           </div>
-          <Button onClick={handleEndDay} disabled={generatingReport} size="lg" className="gap-2 bg-destructive hover:bg-destructive/90">
+          <Button
+            onClick={previewEndDay}
+            disabled={loadingPreview || generatingReport}
+            size="lg"
+            variant="outline"
+            className="gap-2"
+            title="Preview and manually end the day. The day also closes automatically at 23:59 local time."
+          >
             <TrendingUp className="h-4 w-4" />
-            {generatingReport ? "Generating..." : "End Day"}
+            {loadingPreview ? "Loading…" : "End Day Manually"}
           </Button>
         </div>
 
