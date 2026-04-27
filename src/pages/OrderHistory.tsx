@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { formatPrice } from "@/lib/currency";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import ExpenseManager from "@/components/expenses/ExpenseManager";
 import { useOrders, useInvalidateOrders, useMenuTags, useMenuItems, useExpenses, useRestaurantSettings } from "@/hooks/useQueries";
@@ -106,6 +106,18 @@ const OrderHistory = () => {
   const [generatingReport, setGeneratingReport] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<string | null>(null);
+  // End-Day confirmation flow
+  const [endDayPreview, setEndDayPreview] = useState<{
+    orders: OrderWithItems[];
+    paidCount: number;
+    paidRevenue: number;
+    unpaidCount: number;
+    unpaidTotal: number;
+    paymentMethods: Record<string, { count: number; total: number }>;
+    cutoffDate: Date;
+  } | null>(null);
+  const [showEndDayConfirm, setShowEndDayConfirm] = useState(false);
+  const [loadingPreview, setLoadingPreview] = useState(false);
   const [groupBy, setGroupBy] = useState<"none" | "month" | "year">("none");
   const { data: menuTags = [] } = useMenuTags();
   const { data: allMenuItems = [] } = useMenuItems();
@@ -244,97 +256,118 @@ const OrderHistory = () => {
     setOrderToDelete(orderId);
     setDeleteDialogOpen(true);
   };
-  const handleEndDay = async () => {
-    setGeneratingReport(true);
+  // Step 1: load orders that WOULD be included and open the confirmation dialog.
+  const previewEndDay = async () => {
+    if (!restaurantId) {
+      toast.error("No restaurant found");
+      return;
+    }
+    setLoadingPreview(true);
     try {
-      const {
-        data: {
-          user
-        }
-      } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
-      if (!restaurantId) {
-        toast.error("No restaurant found");
-        setGeneratingReport(false);
-        return;
-      }
-
-      // Get the most recent daily report to find last end day using created_at timestamp
-      const {
-        data: lastReport
-      } = await supabase.from("daily_reports")
+      const { data: lastReport } = await supabase
+        .from("daily_reports")
         .select("created_at")
         .eq("restaurant_id", restaurantId)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      
-      // Use the exact timestamp of the last report as cutoff
       const cutoffDate = lastReport ? new Date(lastReport.created_at) : new Date(0);
-      const today = format(new Date(), "yyyy-MM-dd");
 
-      // Fetch all orders since last end day for this restaurant
-      const {
-        data: ordersData,
-        error: ordersError
-      } = await supabase.from("orders").select("*").eq("restaurant_id", restaurantId).eq("status", "confirmed").gte("created_at", cutoffDate.toISOString()).order("created_at", {
-        ascending: false
-      });
+      const { data: ordersData, error: ordersError } = await supabase
+        .from("orders")
+        .select("*")
+        .eq("restaurant_id", restaurantId)
+        .eq("status", "confirmed")
+        .gte("created_at", cutoffDate.toISOString())
+        .order("created_at", { ascending: false });
       if (ordersError) throw ordersError;
       if (!ordersData || ordersData.length === 0) {
         toast.error("No orders found since last end day");
-        setGeneratingReport(false);
         return;
       }
 
-      // Fetch all order items for these orders
-      const orderIds = ordersData.map(o => o.id);
-      const {
-        data: itemsData,
-        error: itemsError
-      } = await supabase.from("order_items").select("*").in("order_id", orderIds);
-      if (itemsError) throw itemsError;
+      const orderIds = ordersData.map((o) => o.id);
+      const { data: itemsData } = await supabase
+        .from("order_items")
+        .select("*")
+        .in("order_id", orderIds);
 
-      // Combine orders with their items
-      const ordersWithItems: OrderWithItems[] = ordersData.map(order => ({
+      const ordersWithItems: OrderWithItems[] = ordersData.map((order) => ({
         ...order,
-        items: itemsData?.filter(item => item.order_id === order.id) || []
+        items: itemsData?.filter((item) => item.order_id === order.id) || [],
       }));
 
-      // Calculate totals — only PAID orders count toward revenue
-      const paidOrders = ordersData.filter((o: any) => (o.payment_status || 'paid') === 'paid');
-      const totalRevenue = paidOrders.reduce((sum: number, order: any) => sum + Number(order.total), 0);
+      const paidOrders = ordersData.filter(
+        (o: any) => (o.payment_status || "paid") === "paid"
+      );
+      const unpaidOrders = ordersData.filter(
+        (o: any) => (o.payment_status || "paid") !== "paid"
+      );
+      const paidRevenue = paidOrders.reduce(
+        (s: number, o: any) => s + Number(o.total),
+        0
+      );
+      const unpaidTotal = unpaidOrders.reduce(
+        (s: number, o: any) => s + Number(o.total),
+        0
+      );
       const paymentMethods: Record<string, { count: number; total: number }> = {};
-      paidOrders.forEach((order: any) => {
-        if (!paymentMethods[order.payment_method]) {
-          paymentMethods[order.payment_method] = { count: 0, total: 0 };
+      paidOrders.forEach((o: any) => {
+        if (!paymentMethods[o.payment_method]) {
+          paymentMethods[o.payment_method] = { count: 0, total: 0 };
         }
-        paymentMethods[order.payment_method].count++;
-        paymentMethods[order.payment_method].total += Number(order.total);
+        paymentMethods[o.payment_method].count++;
+        paymentMethods[o.payment_method].total += Number(o.total);
       });
 
-      // Save daily report - use insert (not upsert) to allow multiple reports per day
+      setEndDayPreview({
+        orders: ordersWithItems,
+        paidCount: paidOrders.length,
+        paidRevenue,
+        unpaidCount: unpaidOrders.length,
+        unpaidTotal,
+        paymentMethods,
+        cutoffDate,
+      });
+      setShowEndDayConfirm(true);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to load preview");
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
+
+  // Step 2: actually commit the daily report after the user confirms.
+  const confirmEndDay = async () => {
+    if (!endDayPreview) return;
+    setGeneratingReport(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+      if (!restaurantId) throw new Error("No restaurant found");
+
+      const today = format(new Date(), "yyyy-MM-dd");
       const { error: reportError } = await supabase.from("daily_reports").insert({
         staff_id: user.id,
         restaurant_id: restaurantId,
         report_date: today,
-        total_orders: paidOrders.length,
-        total_revenue: totalRevenue,
-        payment_methods: paymentMethods
+        total_orders: endDayPreview.paidCount,
+        total_revenue: endDayPreview.paidRevenue,
+        payment_methods: endDayPreview.paymentMethods,
       });
       if (reportError) throw reportError;
 
-      // Set report data and show dialog
       setDailyReport({
-        total_orders: paidOrders.length,
-        total_revenue: totalRevenue,
-        payment_methods: paymentMethods,
-        orders: ordersWithItems
+        total_orders: endDayPreview.paidCount,
+        total_revenue: endDayPreview.paidRevenue,
+        payment_methods: endDayPreview.paymentMethods,
+        orders: endDayPreview.orders,
       });
+      setShowEndDayConfirm(false);
+      setEndDayPreview(null);
       setShowReport(true);
       toast.success("Daily report generated successfully");
-      invalidateOrders(); // Refresh orders to update the cutoff
+      invalidateOrders();
     } catch (error: any) {
       toast.error(error.message || "Failed to generate report");
     } finally {
@@ -475,9 +508,16 @@ const OrderHistory = () => {
             <h2 className="text-3xl font-bold">Order History</h2>
             <p className="text-muted-foreground">Manage and track all orders</p>
           </div>
-          <Button onClick={handleEndDay} disabled={generatingReport} size="lg" className="gap-2 bg-destructive hover:bg-destructive/90">
+          <Button
+            onClick={previewEndDay}
+            disabled={loadingPreview || generatingReport}
+            size="lg"
+            variant="outline"
+            className="gap-2"
+            title="Preview and manually end the day. The day also closes automatically at 23:59 local time."
+          >
             <TrendingUp className="h-4 w-4" />
-            {generatingReport ? "Generating..." : "End Day"}
+            {loadingPreview ? "Loading…" : "End Day Manually"}
           </Button>
         </div>
 
@@ -702,6 +742,101 @@ const OrderHistory = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* End Day confirmation + preview */}
+      <Dialog open={showEndDayConfirm} onOpenChange={(o) => !generatingReport && setShowEndDayConfirm(o)}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>End the day now?</DialogTitle>
+            <DialogDescription>
+              Review the orders and totals that will be saved into today's daily report.
+              The day also closes automatically at 23:59 local time — this manual close is optional.
+            </DialogDescription>
+          </DialogHeader>
+
+          {endDayPreview && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="rounded-md border p-3">
+                  <p className="text-xs text-muted-foreground">Orders</p>
+                  <p className="text-xl font-bold">{endDayPreview.orders.length}</p>
+                </div>
+                <div className="rounded-md border p-3">
+                  <p className="text-xs text-muted-foreground">Paid revenue</p>
+                  <p className="text-xl font-bold text-primary">{formatPrice(endDayPreview.paidRevenue)}</p>
+                </div>
+                <div className="rounded-md border p-3">
+                  <p className="text-xs text-muted-foreground">Unpaid</p>
+                  <p className="text-xl font-bold text-destructive">{formatPrice(endDayPreview.unpaidTotal)}</p>
+                  <p className="text-[10px] text-muted-foreground">{endDayPreview.unpaidCount} order(s)</p>
+                </div>
+                <div className="rounded-md border p-3">
+                  <p className="text-xs text-muted-foreground">Since</p>
+                  <p className="text-sm font-medium">
+                    {endDayPreview.cutoffDate.getTime() === 0
+                      ? "Start"
+                      : format(endDayPreview.cutoffDate, "MMM d, HH:mm")}
+                  </p>
+                </div>
+              </div>
+
+              {Object.keys(endDayPreview.paymentMethods).length > 0 && (
+                <div>
+                  <p className="text-sm font-medium mb-2">Payment methods (paid)</p>
+                  <div className="space-y-1">
+                    {Object.entries(endDayPreview.paymentMethods).map(([name, info]) => (
+                      <div key={name} className="flex justify-between text-sm border-b py-1">
+                        <span>{name} <span className="text-muted-foreground">×{info.count}</span></span>
+                        <span className="font-medium">{formatPrice(info.total)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <p className="text-sm font-medium mb-2">Orders included ({endDayPreview.orders.length})</p>
+                <div className="border rounded-md max-h-64 overflow-y-auto divide-y">
+                  {endDayPreview.orders.map((o) => {
+                    const unpaid = (o.payment_status || "paid") !== "paid";
+                    return (
+                      <div key={o.id} className="flex items-center justify-between px-3 py-2 text-sm">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="font-mono text-xs">#{o.order_number}</span>
+                          <span className="text-muted-foreground truncate">
+                            {format(parseISO(o.created_at), "HH:mm")} • {o.payment_method}
+                          </span>
+                          {unpaid && <Badge variant="destructive" className="text-[10px]">Unpaid</Badge>}
+                        </div>
+                        <span className={unpaid ? "text-destructive font-medium" : "font-medium"}>
+                          {formatPrice(Number(o.total))}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowEndDayConfirm(false)}
+              disabled={generatingReport}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmEndDay}
+              disabled={generatingReport}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {generatingReport ? "Closing day…" : "Confirm & End Day"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showReport} onOpenChange={setShowReport}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto print:max-h-none print:overflow-visible print:max-w-none print:w-full print:h-auto print:border-none print:shadow-none print:p-0" id="eod-print">
