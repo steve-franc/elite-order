@@ -6,11 +6,19 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 
 /**
- * Auto-ends the day at 23:59 local time.
- * - Only runs for managers/staff (not investors / unauthenticated).
- * - Idempotent: checks the latest daily_reports row before inserting; if a
- *   report was already created in the last 5 minutes, skips.
- * - Orders created after midnight will naturally fall into the next day's window.
+ * Auto-ends the day at/after 23:59 local time.
+ *
+ * Reliability strategy:
+ *  - Polls every 60s instead of a single setTimeout (survives device sleep,
+ *    background-tab throttling, and laptops closed overnight).
+ *  - Runs an immediate "catch-up" check on mount: if the last daily_reports
+ *    row is older than the most recent 23:59 cutoff AND there are confirmed
+ *    paid orders sitting before today's local midnight, it generates the
+ *    missed report right away. This handles the common case where every
+ *    device was asleep/closed at midnight.
+ *  - Idempotent: skips if a report was generated in the last 5 minutes, and
+ *    remembers the date it ran for in this tab to avoid duplicates.
+ *  - Disabled for observers (investors) and unauthenticated users.
  */
 export function useAutoEndDay() {
   const { restaurantId } = useRestaurantContext();
@@ -20,63 +28,83 @@ export function useAutoEndDay() {
   useEffect(() => {
     if (loading || !restaurantId || isInvestor) return;
 
-    let timeoutId: number | undefined;
+    let intervalId: number | undefined;
+    let cancelled = false;
 
-    const scheduleNext = () => {
-      const now = new Date();
-      const target = new Date(now);
-      target.setHours(23, 59, 0, 0);
-      // If we've already passed 23:59 today, schedule for tomorrow.
-      if (now >= target) target.setDate(target.getDate() + 1);
-      const delay = target.getTime() - now.getTime();
-      timeoutId = window.setTimeout(runEndDay, delay);
+    /**
+     * Returns the most recent past "end of day" boundary (today 23:59 if
+     * we're past it, otherwise yesterday 23:59).
+     */
+    const lastCutoff = (now: Date) => {
+      const c = new Date(now);
+      c.setHours(23, 59, 0, 0);
+      if (now < c) c.setDate(c.getDate() - 1);
+      return c;
     };
 
-    const runEndDay = async () => {
+    const tryEndDay = async (opts: { catchUp: boolean }) => {
       try {
-        const today = format(new Date(), "yyyy-MM-dd");
-        if (ranForDateRef.current === today) {
-          scheduleNext();
-          return;
-        }
+        const now = new Date();
+        const cutoffBoundary = lastCutoff(now);
+
+        // For the scheduled (non-catchup) path, only run once we're past 23:59.
+        if (!opts.catchUp && now < cutoffBoundary) return;
+
+        // The "report date" is the day the boundary belongs to.
+        const reportDate = format(cutoffBoundary, "yyyy-MM-dd");
+        if (ranForDateRef.current === reportDate) return;
 
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) { scheduleNext(); return; }
+        if (!user) return;
 
-        // Skip if a report was just generated (manual or another tab).
+        // Get the most recent report for this restaurant.
         const { data: lastReport } = await supabase
           .from("daily_reports")
-          .select("created_at")
+          .select("created_at, report_date")
           .eq("restaurant_id", restaurantId)
           .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle();
 
+        // If a report was just generated (manual or another tab), skip.
         const fiveMinAgo = Date.now() - 5 * 60 * 1000;
         if (lastReport && new Date(lastReport.created_at).getTime() > fiveMinAgo) {
-          ranForDateRef.current = today;
-          scheduleNext();
+          ranForDateRef.current = reportDate;
           return;
         }
 
-        const cutoff = lastReport ? new Date(lastReport.created_at) : new Date(0);
+        // If the latest report already covers this boundary, skip.
+        if (lastReport && new Date(lastReport.created_at) >= cutoffBoundary) {
+          ranForDateRef.current = reportDate;
+          return;
+        }
 
-        // Sum paid + confirmed orders since cutoff.
+        const sinceCutoff = lastReport ? new Date(lastReport.created_at) : new Date(0);
+
+        // Only include orders BEFORE the boundary (so post-midnight orders
+        // are saved for the next day's report).
         const { data: ordersData } = await supabase
           .from("orders")
-          .select("total, payment_method, status, payment_status")
+          .select("total, payment_method, status, payment_status, created_at")
           .eq("restaurant_id", restaurantId)
           .eq("status", "confirmed")
-          .gte("created_at", cutoff.toISOString());
+          .gte("created_at", sinceCutoff.toISOString())
+          .lt("created_at", cutoffBoundary.toISOString());
 
-        const paid = (ordersData || []).filter((o: any) => (o.payment_status || "paid") === "paid");
+        const paid = (ordersData || []).filter(
+          (o: any) => (o.payment_status || "paid") === "paid"
+        );
+
         if (paid.length === 0) {
-          ranForDateRef.current = today;
-          scheduleNext();
+          // Nothing to close — still mark so we don't re-check every 60s.
+          ranForDateRef.current = reportDate;
           return;
         }
 
-        const totalRevenue = paid.reduce((s: number, o: any) => s + Number(o.total || 0), 0);
+        const totalRevenue = paid.reduce(
+          (s: number, o: any) => s + Number(o.total || 0),
+          0
+        );
         const pm: Record<string, { count: number; total: number }> = {};
         paid.forEach((o: any) => {
           if (!pm[o.payment_method]) pm[o.payment_method] = { count: 0, total: 0 };
@@ -87,26 +115,36 @@ export function useAutoEndDay() {
         const { error } = await supabase.from("daily_reports").insert({
           staff_id: user.id,
           restaurant_id: restaurantId,
-          report_date: today,
+          report_date: reportDate,
           total_orders: paid.length,
           total_revenue: totalRevenue,
           payment_methods: pm,
         });
 
-        if (!error) {
-          ranForDateRef.current = today;
-          toast.success("Day auto-ended at 11:59 PM");
+        if (!error && !cancelled) {
+          ranForDateRef.current = reportDate;
+          toast.success(
+            opts.catchUp
+              ? `Auto-closed pending day (${reportDate})`
+              : "Day auto-ended at 11:59 PM"
+          );
         }
       } catch {
-        // silent — try again tomorrow
-      } finally {
-        scheduleNext();
+        // silent — next poll will retry
       }
     };
 
-    scheduleNext();
+    // Catch-up immediately on mount (handles "nobody was online at midnight").
+    tryEndDay({ catchUp: true });
+
+    // Poll every 60s — robust against sleep, throttling, and reopened tabs.
+    intervalId = window.setInterval(() => {
+      tryEndDay({ catchUp: false });
+    }, 60_000);
+
     return () => {
-      if (timeoutId) window.clearTimeout(timeoutId);
+      cancelled = true;
+      if (intervalId) window.clearInterval(intervalId);
     };
   }, [restaurantId, isInvestor, loading]);
 }
