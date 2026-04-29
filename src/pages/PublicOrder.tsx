@@ -539,14 +539,14 @@ const PublicOrder = () => {
           {/* Order Summary - Desktop only */}
           {!isMobile && (
             <div className="lg:col-span-1">
-              <Card className="sticky top-6">
-                <CardHeader>
+              <Card className="sticky top-6 max-h-[calc(100vh-3rem)] flex flex-col">
+                <CardHeader className="shrink-0">
                   <CardTitle className="flex items-center gap-2">
                     <ShoppingCart className="h-5 w-5" />
                     Your Order
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 overflow-y-auto flex-1">
                   {orderSummaryContent}
                 </CardContent>
               </Card>
