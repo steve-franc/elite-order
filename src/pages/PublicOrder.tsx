@@ -503,10 +503,21 @@ const PublicOrder = () => {
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Menu Items */}
           <div className="lg:col-span-2 space-y-6 pb-20 md:pb-0">
+            {menuItems.length > 0 && (
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search menu items..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value.slice(0, 100))}
+                  className="pl-9"
+                />
+              </div>
+            )}
             {Object.entries(groupedItems).map(([category, items]) => {
-              const isOpen = !collapsedCategories.has(category);
+              const isOpen = isSearching || !collapsedCategories.has(category);
               return (
-                <Collapsible key={category} open={isOpen} onOpenChange={() => toggleCategory(category)}>
+                <Collapsible key={category} open={isOpen} onOpenChange={() => !isSearching && toggleCategory(category)}>
                   <CollapsibleTrigger className="flex items-center gap-2 w-full text-left py-2 px-1 hover:bg-muted/50 rounded-md transition-colors">
                     {isOpen ? (
                       <ChevronDown className="h-4 w-4 text-muted-foreground" />
