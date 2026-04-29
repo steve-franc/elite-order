@@ -480,9 +480,19 @@ const PublicOrder = () => {
                   {items.map((item) => (
                     <Card
                       key={item.id}
-                      className="cursor-pointer hover:shadow-md transition-shadow"
+                      className="cursor-pointer hover:shadow-md transition-shadow overflow-hidden"
                       onClick={() => addToOrder(item)}
                     >
+                      {item.image_url && (
+                        <div className="w-full h-40 bg-muted overflow-hidden">
+                          <img
+                            src={item.image_url}
+                            alt={item.name}
+                            loading="lazy"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
                       <CardHeader className="pb-3">
                         <div className="flex items-start justify-between">
                           <CardTitle className="text-base">{item.name}</CardTitle>
