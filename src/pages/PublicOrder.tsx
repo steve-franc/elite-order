@@ -375,18 +375,27 @@ const PublicOrder = () => {
         </div>
         <div>
           <Label>Payment Method</Label>
-          <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="mt-2 space-y-2">
-            {availablePaymentMethods.map((method) => (
-              <div key={method.name} className="flex items-center space-x-2">
-                <RadioGroupItem value={method.name} id={`public-${method.name.toLowerCase()}`} />
-                <Label htmlFor={`public-${method.name.toLowerCase()}`} className="font-normal">
-                  {method.name}
-                  {method.currency !== "TRY" && (
-                    <span className="text-xs text-muted-foreground ml-1">({method.currency})</span>
-                  )}
+          <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="mt-2 grid grid-cols-2 gap-2">
+            {availablePaymentMethods.map((method) => {
+              const selected = paymentMethod === method.name;
+              return (
+                <Label
+                  key={method.name}
+                  htmlFor={`public-${method.name.toLowerCase()}`}
+                  className={`flex items-center gap-2 rounded-md border p-3 cursor-pointer transition-colors font-normal ${
+                    selected ? "border-primary bg-primary/5" : "border-input hover:bg-muted/50"
+                  }`}
+                >
+                  <RadioGroupItem value={method.name} id={`public-${method.name.toLowerCase()}`} />
+                  <span className="text-sm flex-1 truncate">
+                    {method.name}
+                    {method.currency !== "TRY" && (
+                      <span className="text-xs text-muted-foreground ml-1">({method.currency})</span>
+                    )}
+                  </span>
                 </Label>
-              </div>
-            ))}
+              );
+            })}
           </RadioGroup>
 
           {/* Show selected method details */}
