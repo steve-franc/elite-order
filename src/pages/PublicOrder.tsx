@@ -231,6 +231,16 @@ const PublicOrder = () => {
         extra_units: item.extraUnits,
       }));
 
+      const customerInfoLines = [
+        `name: ${validatedData.customerName}`,
+        `phone number: ${validatedData.customerPhone || ""}`,
+        `location: ${validatedData.customerLocation || ""}`,
+      ];
+      const composedNotes = [
+        ...customerInfoLines,
+        ...(validatedData.notes ? ["", validatedData.notes] : []),
+      ].join("\n");
+
       const { data: order, error: orderError } = await supabase.rpc("create_public_order", {
         _restaurant_id: restaurantId,
         _customer_name: validatedData.customerName,
@@ -238,7 +248,7 @@ const PublicOrder = () => {
         _customer_phone: validatedData.customerPhone || null,
         _customer_location: validatedData.customerLocation || null,
         _payment_method: validatedData.paymentMethod,
-        _notes: validatedData.notes || null,
+        _notes: composedNotes,
         _items: payloadItems,
       });
 
@@ -529,14 +539,14 @@ const PublicOrder = () => {
           {/* Order Summary - Desktop only */}
           {!isMobile && (
             <div className="lg:col-span-1">
-              <Card className="sticky top-6">
-                <CardHeader>
+              <Card className="sticky top-6 max-h-[calc(100vh-3rem)] flex flex-col">
+                <CardHeader className="shrink-0">
                   <CardTitle className="flex items-center gap-2">
                     <ShoppingCart className="h-5 w-5" />
                     Your Order
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 overflow-y-auto flex-1">
                   {orderSummaryContent}
                 </CardContent>
               </Card>
