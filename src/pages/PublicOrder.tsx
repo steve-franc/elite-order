@@ -231,6 +231,16 @@ const PublicOrder = () => {
         extra_units: item.extraUnits,
       }));
 
+      const customerInfoLines = [
+        `name: ${validatedData.customerName}`,
+        `phone number: ${validatedData.customerPhone || ""}`,
+        `location: ${validatedData.customerLocation || ""}`,
+      ];
+      const composedNotes = [
+        ...customerInfoLines,
+        ...(validatedData.notes ? ["", validatedData.notes] : []),
+      ].join("\n");
+
       const { data: order, error: orderError } = await supabase.rpc("create_public_order", {
         _restaurant_id: restaurantId,
         _customer_name: validatedData.customerName,
@@ -238,7 +248,7 @@ const PublicOrder = () => {
         _customer_phone: validatedData.customerPhone || null,
         _customer_location: validatedData.customerLocation || null,
         _payment_method: validatedData.paymentMethod,
-        _notes: validatedData.notes || null,
+        _notes: composedNotes,
         _items: payloadItems,
       });
 
