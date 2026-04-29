@@ -580,6 +580,13 @@ const PublicOrder = () => {
                 </CardContent>
               </Card>
             )}
+            {menuItems.length > 0 && Object.keys(groupedItems).length === 0 && (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <p className="text-muted-foreground">No items match "{searchQuery}"</p>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Order Summary - Desktop only */}
