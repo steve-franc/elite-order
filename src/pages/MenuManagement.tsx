@@ -41,8 +41,10 @@ const MenuManagement = () => {
   const invalidateMenu = useInvalidateMenuItems();
   const { data: settings } = useRestaurantSettings();
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
@@ -57,6 +59,7 @@ const MenuManagement = () => {
     currency: "TRY",
     is_inventory_item: false,
     stock_qty: "",
+    image_url: "",
   });
 
 
