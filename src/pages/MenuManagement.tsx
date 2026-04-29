@@ -187,6 +187,39 @@ const MenuManagement = () => {
       toast.error("Failed to update visibility");
     }
   };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be under 5MB");
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please upload an image file");
+      return;
+    }
+    setUploadingImage(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `${restaurantId || "shared"}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await supabase.storage.from("dish-photos").upload(path, file, {
+        cacheControl: "3600",
+        upsert: false,
+      });
+      if (error) throw error;
+      const { data } = supabase.storage.from("dish-photos").getPublicUrl(path);
+      setFormData((prev) => ({ ...prev, image_url: data.publicUrl }));
+      toast.success("Photo uploaded");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to upload photo");
+    } finally {
+      setUploadingImage(false);
+      e.target.value = "";
+    }
+  };
+
+  const removeImage = () => setFormData((prev) => ({ ...prev, image_url: "" }));
   const handleEdit = (item: MenuItem) => {
     setEditingItem(item);
     setFormData({
