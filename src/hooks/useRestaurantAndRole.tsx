@@ -8,6 +8,7 @@ interface RestaurantRoleState {
   user: User | null;
   restaurantId: string | null;
   restaurantName: string | null;
+  logoUrl: string | null;
   role: UserRole;
   authLoading: boolean;
   loading: boolean;
