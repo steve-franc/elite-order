@@ -47,7 +47,7 @@ export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { isManager, isInvestor } = useUserRole();
-  const { restaurantName } = useRestaurantContext();
+  const { restaurantName, logoUrl } = useRestaurantContext();
 
   const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut();
