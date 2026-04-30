@@ -34,6 +34,11 @@ const managerItems = [
   { title: "Admin", url: "/admin", icon: Shield },
 ];
 
+// Ops can access menu management (no admin/reports/inventory)
+const opsItems = [
+  { title: "Menu", url: "/menu", icon: Menu },
+];
+
 // Observers (DB role: investor) get a strict read-only set:
 // Reports + Admin only — no order taking, no edits.
 const observerItems = [
