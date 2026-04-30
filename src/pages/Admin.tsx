@@ -105,6 +105,8 @@ const Admin = () => {
   const [editRate, setEditRate] = useState("");
   const [allowPublicOrders, setAllowPublicOrders] = useState<boolean>(true);
   const [savingPublicOrders, setSavingPublicOrders] = useState(false);
+  const [restaurantLogoUrl, setRestaurantLogoUrl] = useState<string | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const { data: menuTags = [], isLoading: tagsLoading } = useMenuTags();
   const invalidateTags = useInvalidateMenuTags();
   const { data: menuItemsData = [] } = useMenuItems();
@@ -151,7 +153,7 @@ const Admin = () => {
     if (!restaurantId) return;
     const { data } = await supabase
       .from("restaurant_settings")
-      .select("fixed_daily_bills, payment_methods, fixed_monthly_expenses, profit_margin_threshold, monthly_bills, allow_public_orders")
+      .select("fixed_daily_bills, payment_methods, fixed_monthly_expenses, profit_margin_threshold, monthly_bills, allow_public_orders, logo_url")
       .eq("restaurant_id", restaurantId)
       .maybeSingle();
     if (data) {
@@ -165,6 +167,61 @@ const Admin = () => {
       setProfitMarginThreshold(Number((data as any).profit_margin_threshold) || 20);
       setThresholdInput(String((data as any).profit_margin_threshold || 20));
       setAllowPublicOrders(Boolean((data as any).allow_public_orders ?? true));
+      setRestaurantLogoUrl((data as any).logo_url ?? null);
+    }
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !restaurantId) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please upload an image file");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be smaller than 5MB");
+      return;
+    }
+    setUploadingLogo(true);
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const path = `${restaurantId}/logo-${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("restaurant-logos")
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (uploadError) throw uploadError;
+      const { data: pub } = supabase.storage.from("restaurant-logos").getPublicUrl(path);
+      const publicUrl = pub.publicUrl;
+      const { error: updateError } = await supabase
+        .from("restaurant_settings")
+        .update({ logo_url: publicUrl } as any)
+        .eq("restaurant_id", restaurantId);
+      if (updateError) throw updateError;
+      setRestaurantLogoUrl(publicUrl);
+      toast.success("Logo updated");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to upload logo");
+    } finally {
+      setUploadingLogo(false);
+      e.target.value = "";
+    }
+  };
+
+  const removeLogo = async () => {
+    if (!restaurantId) return;
+    setUploadingLogo(true);
+    try {
+      const { error } = await supabase
+        .from("restaurant_settings")
+        .update({ logo_url: null } as any)
+        .eq("restaurant_id", restaurantId);
+      if (error) throw error;
+      setRestaurantLogoUrl(null);
+      toast.success("Logo removed");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to remove logo");
+    } finally {
+      setUploadingLogo(false);
     }
   };
 
