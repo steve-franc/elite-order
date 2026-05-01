@@ -26,6 +26,7 @@ const ReportBreakdown = lazy(() => import("./pages/ReportBreakdown"));
 const Debtors = lazy(() => import("./pages/Debtors"));
 const Reports = lazy(() => import("./pages/Reports"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const Superadmin = lazy(() => import("./pages/Superadmin"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
