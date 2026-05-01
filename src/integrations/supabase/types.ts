@@ -790,6 +790,53 @@ export type Database = {
         Args: { _restaurant_id: string; _user_id: string }
         Returns: boolean
       }
+      is_superadmin: { Args: { _user_id: string }; Returns: boolean }
+      superadmin_change_role: {
+        Args: { _restaurant_id: string; _role: string; _user_id: string }
+        Returns: undefined
+      }
+      superadmin_get_restaurant: {
+        Args: { _restaurant_id: string }
+        Returns: Json
+      }
+      superadmin_list_restaurants: {
+        Args: never
+        Returns: {
+          created_at: string
+          created_by: string
+          id: string
+          last_order_at: string
+          logo_url: string
+          name: string
+          orders_count: number
+          revenue: number
+          staff_count: number
+          status: string
+        }[]
+      }
+      superadmin_list_users: {
+        Args: never
+        Returns: {
+          created_at: string
+          full_name: string
+          is_superadmin: boolean
+          restaurants: Json
+          user_id: string
+        }[]
+      }
+      superadmin_overview: { Args: never; Returns: Json }
+      superadmin_purge_restaurant: {
+        Args: { _restaurant_id: string }
+        Returns: undefined
+      }
+      superadmin_remove_staff: {
+        Args: { _restaurant_id: string; _user_id: string }
+        Returns: undefined
+      }
+      superadmin_set_restaurant_status: {
+        Args: { _restaurant_id: string; _status: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role:
