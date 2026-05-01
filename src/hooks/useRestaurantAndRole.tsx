@@ -60,8 +60,21 @@ export function RestaurantRoleProvider({ children }: { children: ReactNode }) {
   const [restaurantStatus, setRestaurantStatus] = useState<string | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [role, setRole] = useState<UserRole>(null);
+  const [isSuperadminAccount, setIsSuperadminAccount] = useState(false);
+  const [godModeDisabled, setGodModeDisabledState] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(GOD_MODE_OFF_KEY) === "1";
+  });
   const [authLoading, setAuthLoading] = useState(true);
   const [loading, setLoading] = useState(true);
+
+  const setGodModeDisabled = (off: boolean) => {
+    if (typeof window !== "undefined") {
+      if (off) window.localStorage.setItem(GOD_MODE_OFF_KEY, "1");
+      else window.localStorage.removeItem(GOD_MODE_OFF_KEY);
+    }
+    setGodModeDisabledState(off);
+  };
 
   useEffect(() => {
     let cancelled = false;
