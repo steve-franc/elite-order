@@ -257,6 +257,7 @@ export function useUserRole() {
     isCounter: ctx.isCounter,
     isServer: ctx.isServer,
     isInvestor: ctx.isInvestor,
+    isSuperadmin: ctx.isSuperadmin,
     canViewReports: ctx.canViewReports,
   };
 }
