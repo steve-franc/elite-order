@@ -133,7 +133,8 @@ const Auth = () => {
       fullName,
       email,
       password,
-      restaurantName: newRestaurantName
+      restaurantName: newRestaurantName,
+      businessType,
     });
     if (!validation.success) {
       toast.error(validation.error);
@@ -151,14 +152,15 @@ const Auth = () => {
           data: {
             full_name: validation.data.fullName,
             onboarding_mode: "create",
-            create_restaurant_name: validation.data.restaurantName
+            create_restaurant_name: validation.data.restaurantName,
+            business_type: validation.data.businessType,
           }
         }
       });
       if (error) throw error;
       toast.success("Account created! Please check your email to verify your account.");
     } catch (error: any) {
-      toast.error(error.message || "Failed to register restaurant");
+      toast.error(error.message || "Failed to register business");
     } finally {
       setLoading(false);
     }
