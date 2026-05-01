@@ -680,6 +680,17 @@ const PublicOrder = () => {
           </DrawerContent>
         </Drawer>
       )}
+      {bookingItem && (
+        <BookSlotDialog
+          open={!!bookingItem}
+          onOpenChange={(o) => !o && setBookingItem(null)}
+          menuItemId={bookingItem.id}
+          menuItemName={bookingItem.name}
+          durationMinutes={bookingItem.service_duration_minutes ?? 60}
+          advanceDays={bookingItem.advance_booking_days ?? 30}
+          onConfirm={handleSlotConfirmed}
+        />
+      )}
     </div>
   );
 };
