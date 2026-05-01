@@ -60,9 +60,10 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 // Observers (DB role: investor) are read-only — they can only access /reports and /admin.
+// Superadmins are global and routed to /superadmin.
 const ObserverBlockedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading: authLoading } = useAuth();
-  const { isInvestor, loading: roleLoading } = useUserRole();
+  const { isInvestor, isSuperadmin, loading: roleLoading } = useUserRole();
 
   if (authLoading || roleLoading) {
     return (
@@ -72,7 +73,23 @@ const ObserverBlockedRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
   if (!user) return <Navigate to="/auth" replace />;
+  if (isSuperadmin) return <Navigate to="/superadmin" replace />;
   if (isInvestor) return <Navigate to="/reports" replace />;
+  return <>{children}</>;
+};
+
+const SuperadminRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, loading: authLoading } = useAuth();
+  const { isSuperadmin, loading: roleLoading } = useUserRole();
+  if (authLoading || roleLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    );
+  }
+  if (!user) return <Navigate to="/auth" replace />;
+  if (!isSuperadmin) return <Navigate to="/order/create" replace />;
   return <>{children}</>;
 };
 
