@@ -67,3 +67,14 @@ export function useSuperRestaurantDetail(id: string | undefined) {
     },
   });
 }
+
+export function useSuperUsers() {
+  return useQuery({
+    queryKey: ["super", "users"],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("superadmin_list_users");
+      if (error) throw error;
+      return (data as any[]) ?? [];
+    },
+  });
+}
