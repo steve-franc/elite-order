@@ -224,7 +224,7 @@ export function RestaurantRoleProvider({ children }: { children: ReactNode }) {
       cancelled = true;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [godModeDisabled]);
 
   const isManager = role === "manager";
   const isInvestor = role === "investor";
@@ -246,6 +246,9 @@ export function RestaurantRoleProvider({ children }: { children: ReactNode }) {
     isServer: role === "server",
     isInvestor,
     isSuperadmin,
+    isSuperadminAccount,
+    godModeDisabled,
+    setGodModeDisabled,
     canViewReports: isManager || isInvestor,
   };
 
