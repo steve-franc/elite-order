@@ -72,13 +72,14 @@ export default function SuperRestaurants() {
           {isLoading ? (
             <div className="p-3 space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-14" />)}</div>
           ) : filtered.length === 0 ? (
-            <div className="px-5 py-12 text-center text-sm text-muted-foreground">No restaurants found</div>
+            <div className="px-5 py-12 text-center text-sm text-muted-foreground">No businesses found</div>
           ) : (
             filtered.map((r: any, i: number) => (
               <motion.div key={r.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}
                 className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto_auto_auto_auto] gap-1 md:gap-4 items-center px-5 py-4 border-b border-border last:border-b-0 hover:bg-accent/50 transition-colors">
                 <Link to={`/superadmin/restaurants/${r.id}`} className="block min-w-0">
                   <p className="font-medium text-sm truncate">{r.name}</p>
+                  <p className="text-xs text-muted-foreground capitalize">{(r.business_type || "restaurant").replace("_", " ")}</p>
                   <p className="text-xs text-muted-foreground md:hidden">{r.orders_count} orders · {formatPrice(Number(r.revenue || 0))}</p>
                 </Link>
                 <span className="hidden md:block text-sm text-muted-foreground">{r.staff_count}</span>
