@@ -106,7 +106,7 @@ export default function SuperRestaurants() {
       <Dialog open={!!purgeTarget} onOpenChange={(o) => { if (!o) { setPurgeTarget(null); setPurgeConfirm(""); } }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="text-destructive">Permanently delete restaurant?</DialogTitle>
+            <DialogTitle className="text-destructive">Permanently delete business?</DialogTitle>
             <DialogDescription>
               This will delete <strong>{purgeTarget?.name}</strong> and ALL its data. Cannot be undone.
             </DialogDescription>
