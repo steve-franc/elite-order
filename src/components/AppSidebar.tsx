@@ -1,10 +1,11 @@
-import { ShoppingCart, Menu, History, Shield, Package, LogOut, UtensilsCrossed, Receipt, Users, BarChart3, LayoutDashboard, Store, UtensilsCrossed as ProductIcon } from "lucide-react";
+import { ShoppingCart, Menu, History, Shield, Package, LogOut, UtensilsCrossed, Receipt, Users, BarChart3, LayoutDashboard, Store, UtensilsCrossed as ProductIcon, Crown } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { useUserRole } from "@/hooks/useUserRole";
+import { useUserRole, useRestaurantAndRole } from "@/hooks/useRestaurantAndRole";
 import { useRestaurantContext } from "@/hooks/useRestaurantContext";
+import { Switch } from "@/components/ui/switch";
 import {
   Sidebar,
   SidebarContent,
@@ -52,12 +53,14 @@ export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { isManager, isInvestor, isOps, isSuperadmin } = useUserRole();
+  const { isSuperadminAccount, godModeDisabled, setGodModeDisabled } = useRestaurantAndRole();
   const { restaurantName, logoUrl } = useRestaurantContext();
 
   // Superadmin items (God Mode)
   const superadminItems = [
     { title: "Dashboard", url: "/superadmin", icon: LayoutDashboard },
     { title: "Restaurants", url: "/superadmin/restaurants", icon: Store },
+    { title: "Users", url: "/superadmin/users", icon: Users },
     { title: "Orders", url: "/superadmin/orders", icon: ShoppingCart },
     { title: "Analytics", url: "/superadmin/analytics", icon: BarChart3 },
     { title: "Products", url: "/superadmin/products", icon: ProductIcon },
@@ -143,6 +146,41 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="border-t">
+        {isSuperadminAccount && !collapsed && (
+          <div className="flex items-center justify-between gap-2 px-2 py-2 mb-1 rounded-md bg-amber-500/10 border border-amber-500/30">
+            <div className="flex items-center gap-2 min-w-0">
+              <Crown className="h-4 w-4 text-amber-600 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs font-semibold leading-tight">God Mode</p>
+                <p className="text-[10px] text-muted-foreground leading-tight truncate">
+                  {godModeDisabled ? "Acting as restaurant" : "Platform-wide"}
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={!godModeDisabled}
+              onCheckedChange={(on) => {
+                setGodModeDisabled(!on);
+                navigate(on ? "/superadmin" : "/dashboard", { replace: true });
+              }}
+            />
+          </div>
+        )}
+        {isSuperadminAccount && collapsed && (
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              tooltip={godModeDisabled ? "Enable God Mode" : "Exit God Mode"}
+              onClick={() => {
+                const next = !godModeDisabled;
+                setGodModeDisabled(next);
+                navigate(next ? "/dashboard" : "/superadmin", { replace: true });
+              }}
+            >
+              <Crown className={cn("h-4 w-4", !godModeDisabled && "text-amber-500")} />
+              <span>God Mode</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        )}
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton onClick={handleSignOut} tooltip="Sign Out">

@@ -4,6 +4,8 @@ import type { User } from "@supabase/supabase-js";
 
 export type UserRole = "server" | "ops" | "counter" | "manager" | "investor" | "superadmin" | null;
 
+const GOD_MODE_OFF_KEY = "god_mode_off";
+
 interface RestaurantRoleState {
   user: User | null;
   restaurantId: string | null;
@@ -20,6 +22,11 @@ interface RestaurantRoleState {
   isServer: boolean;
   isInvestor: boolean;
   isSuperadmin: boolean;
+  /** True when the signed-in user is globally a superadmin (regardless of mode toggle) */
+  isSuperadminAccount: boolean;
+  /** When true, superadmin is acting as their assigned restaurant role */
+  godModeDisabled: boolean;
+  setGodModeDisabled: (off: boolean) => void;
   /** True when role can view reports/admin (manager OR investor) */
   canViewReports: boolean;
 }
@@ -40,6 +47,9 @@ const RestaurantRoleContext = createContext<RestaurantRoleState>({
   isServer: false,
   isInvestor: false,
   isSuperadmin: false,
+  isSuperadminAccount: false,
+  godModeDisabled: false,
+  setGodModeDisabled: () => {},
   canViewReports: false,
 });
 
@@ -50,8 +60,21 @@ export function RestaurantRoleProvider({ children }: { children: ReactNode }) {
   const [restaurantStatus, setRestaurantStatus] = useState<string | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [role, setRole] = useState<UserRole>(null);
+  const [isSuperadminAccount, setIsSuperadminAccount] = useState(false);
+  const [godModeDisabled, setGodModeDisabledState] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(GOD_MODE_OFF_KEY) === "1";
+  });
   const [authLoading, setAuthLoading] = useState(true);
   const [loading, setLoading] = useState(true);
+
+  const setGodModeDisabled = (off: boolean) => {
+    if (typeof window !== "undefined") {
+      if (off) window.localStorage.setItem(GOD_MODE_OFF_KEY, "1");
+      else window.localStorage.removeItem(GOD_MODE_OFF_KEY);
+    }
+    setGodModeDisabledState(off);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -93,7 +116,10 @@ export function RestaurantRoleProvider({ children }: { children: ReactNode }) {
 
         if (cancelled) return;
 
-        if (superRow) {
+        const isSuper = !!superRow;
+        setIsSuperadminAccount(isSuper);
+
+        if (isSuper && !godModeDisabled) {
           setRole("superadmin");
           setRestaurantId(null);
           setRestaurantName(null);
@@ -103,7 +129,7 @@ export function RestaurantRoleProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        // 1) Load membership
+        // 1) Load membership (also for superadmins acting in normal mode)
         let { data: membership } = await supabase
           .from("restaurant_memberships")
           .select("restaurant_id")
@@ -198,7 +224,7 @@ export function RestaurantRoleProvider({ children }: { children: ReactNode }) {
       cancelled = true;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [godModeDisabled]);
 
   const isManager = role === "manager";
   const isInvestor = role === "investor";
@@ -220,6 +246,9 @@ export function RestaurantRoleProvider({ children }: { children: ReactNode }) {
     isServer: role === "server",
     isInvestor,
     isSuperadmin,
+    isSuperadminAccount,
+    godModeDisabled,
+    setGodModeDisabled,
     canViewReports: isManager || isInvestor,
   };
 
