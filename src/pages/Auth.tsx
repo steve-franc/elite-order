@@ -252,10 +252,10 @@ const Auth = () => {
         <Input id="signup-email" type="email" placeholder="staff@restaurant.com" value={email} onChange={e => setEmail(e.target.value.slice(0, 255))} required maxLength={255} />
       </div>
       <div className="space-y-2">
-        <Label>Restaurant</Label>
+        <Label>Business</Label>
         <Select value={joinRestaurantId} onValueChange={setJoinRestaurantId}>
           <SelectTrigger>
-            <SelectValue placeholder="Select your restaurant" />
+            <SelectValue placeholder="Select your business" />
           </SelectTrigger>
           <SelectContent>
             {restaurants.map(r => <SelectItem key={r.id} value={r.id}>
