@@ -71,8 +71,9 @@ export function AppSidebar() {
 
   const isActive = (path: string) => location.pathname === path;
 
-  // Observers see only their reduced set; everyone else sees staff items.
-  const primaryItems = isInvestor ? observerItems : staffItems;
+  // Superadmin gets only God Mode; observers see their reduced set; everyone else sees staff items.
+  const primaryItems = isSuperadmin ? superadminItems : isInvestor ? observerItems : staffItems;
+  const showManagement = !isSuperadmin && (isManager || isOps);
 
   return (
     <Sidebar collapsible="icon">
