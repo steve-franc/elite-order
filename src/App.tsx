@@ -24,6 +24,7 @@ const Inventory = lazy(() => import("./pages/Inventory"));
 const TabsPage = lazy(() => import("./pages/Tabs"));
 const ReportBreakdown = lazy(() => import("./pages/ReportBreakdown"));
 const Debtors = lazy(() => import("./pages/Debtors"));
+const Bookings = lazy(() => import("./pages/Bookings"));
 const Reports = lazy(() => import("./pages/Reports"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const SuperDashboard = lazy(() => import("./pages/superadmin/Dashboard"));
@@ -148,6 +149,7 @@ const App = () => {
               <Route path="/inventory" element={<ObserverBlockedRoute><Inventory /></ObserverBlockedRoute>} />
               <Route path="/tabs" element={<ObserverBlockedRoute><TabsPage /></ObserverBlockedRoute>} />
               <Route path="/debtors" element={<ObserverBlockedRoute><Debtors /></ObserverBlockedRoute>} />
+              <Route path="/bookings" element={<ObserverBlockedRoute><Bookings /></ObserverBlockedRoute>} />
               <Route path="/report/:id" element={<ProtectedRoute><ReportBreakdown /></ProtectedRoute>} />
               <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
               <Route path="/superadmin" element={<SuperadminRoute><SuperDashboard /></SuperadminRoute>} />

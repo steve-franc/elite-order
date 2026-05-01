@@ -1,4 +1,4 @@
-import { ShoppingCart, Menu, History, Shield, Package, LogOut, UtensilsCrossed, Receipt, Users, BarChart3, LayoutDashboard, Store, UtensilsCrossed as ProductIcon, Crown, Megaphone } from "lucide-react";
+import { ShoppingCart, Menu, History, Shield, Package, LogOut, UtensilsCrossed, Receipt, Users, BarChart3, LayoutDashboard, Store, UtensilsCrossed as ProductIcon, Crown, Megaphone, CalendarClock } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 
 const staffItems = [
   { title: "Create Order", url: "/order/create", icon: ShoppingCart },
+  { title: "Bookings", url: "/bookings", icon: CalendarClock },
   { title: "Tabs", url: "/tabs", icon: Receipt },
   { title: "Debtors", url: "/debtors", icon: Users },
   { title: "Orders", url: "/orders", icon: History },

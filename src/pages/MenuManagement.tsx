@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import Layout from "@/components/Layout";
@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Share2, Copy, Check, Search, ChevronDown, ChevronRight, Upload, X, ExternalLink } from "lucide-react";
+import { Plus, Pencil, Trash2, Share2, Copy, Check, Search, ChevronDown, ChevronRight, Upload, X, ExternalLink, CalendarClock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -18,6 +18,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { useRestaurantContext } from "@/hooks/useRestaurantContext";
 import { useMenuItems, useInvalidateMenuItems, useRestaurantSettings } from "@/hooks/useQueries";
 import { menuItemSchema, validateInput } from "@/lib/validations";
+import { ServiceFormSection, DEFAULT_SERVICE_FIELDS, AvailabilityWindow, ServiceFields } from "@/components/ServiceFormSection";
+import { isServiceBusiness } from "@/lib/business-types";
 
 interface MenuItem {
   id: string;
@@ -33,6 +35,11 @@ interface MenuItem {
   is_inventory_item: boolean;
   stock_qty: number;
   image_url: string | null;
+  is_service?: boolean;
+  service_duration_minutes?: number | null;
+  slot_capacity?: number;
+  buffer_minutes?: number;
+  advance_booking_days?: number;
 }
 const MenuManagement = () => {
   const { restaurantId } = useRestaurantContext();
@@ -49,6 +56,9 @@ const MenuManagement = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
+  const [businessType, setBusinessType] = useState<string | null>(null);
+  const [serviceFields, setServiceFields] = useState<ServiceFields>(DEFAULT_SERVICE_FIELDS);
+  const [availability, setAvailability] = useState<AvailabilityWindow[]>([]);
   const [formData, setFormData] = useState({
     name: "",
     category: "",
@@ -62,6 +72,19 @@ const MenuManagement = () => {
     image_url: "",
   });
 
+  // Load business_type once to set defaults
+  useEffect(() => {
+    if (!restaurantId) return;
+    (async () => {
+      const { data } = await supabase
+        .from("restaurants")
+        .select("business_type")
+        .eq("id", restaurantId)
+        .maybeSingle();
+      const bt = (data as any)?.business_type ?? null;
+      setBusinessType(bt);
+    })();
+  }, [restaurantId]);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -107,7 +130,7 @@ const MenuManagement = () => {
         return;
       }
       
-      const itemData = {
+      const itemData: any = {
         name: validation.data.name,
         category: validation.data.category,
         base_price: validation.data.base_price,
@@ -115,28 +138,52 @@ const MenuManagement = () => {
         description: validation.data.description,
         pricing_unit: validation.data.pricing_unit,
         currency: validation.data.currency,
-        is_inventory_item: formData.is_inventory_item,
-        stock_qty: formData.is_inventory_item ? parseInt(formData.stock_qty) || 0 : 0,
+        is_inventory_item: serviceFields.is_service ? false : formData.is_inventory_item,
+        stock_qty: serviceFields.is_service ? 0 : (formData.is_inventory_item ? parseInt(formData.stock_qty) || 0 : 0),
         image_url: formData.image_url || null,
+        is_service: serviceFields.is_service,
+        service_duration_minutes: serviceFields.is_service ? Math.max(parseInt(serviceFields.service_duration_minutes) || 60, 5) : null,
+        slot_capacity: serviceFields.is_service ? Math.max(parseInt(serviceFields.slot_capacity) || 1, 1) : 1,
+        buffer_minutes: serviceFields.is_service ? Math.max(parseInt(serviceFields.buffer_minutes) || 0, 0) : 0,
+        advance_booking_days: serviceFields.is_service ? Math.max(parseInt(serviceFields.advance_booking_days) || 30, 1) : 30,
       };
+
+      let savedItemId: string | null = null;
       if (editingItem) {
-        const {
-          error
-        } = await supabase.from("menu_items").update(itemData).eq("id", editingItem.id);
+        const { error } = await supabase.from("menu_items").update(itemData).eq("id", editingItem.id);
         if (error) throw error;
+        savedItemId = editingItem.id;
         toast.success("Menu item updated!");
       } else {
         if (!restaurantId) throw new Error("Restaurant not selected");
-        const {
-          error
-        } = await supabase.from("menu_items").insert([{
+        const { data: inserted, error } = await supabase.from("menu_items").insert([{
           ...itemData,
           staff_id: user.id,
           restaurant_id: restaurantId
-        }]);
+        }]).select("id").single();
         if (error) throw error;
+        savedItemId = (inserted as any)?.id ?? null;
         toast.success("Menu item added!");
       }
+
+      // Sync service availability windows (replace strategy)
+      if (serviceFields.is_service && savedItemId && restaurantId) {
+        await supabase.from("service_availability").delete().eq("menu_item_id", savedItemId);
+        const rows = availability
+          .filter((w) => w.start_time && w.end_time && w.start_time < w.end_time)
+          .map((w) => ({
+            menu_item_id: savedItemId,
+            restaurant_id: restaurantId,
+            weekday: w.weekday,
+            start_time: w.start_time,
+            end_time: w.end_time,
+            is_active: w.is_active !== false,
+          }));
+        if (rows.length > 0) {
+          await (supabase as any).from("service_availability").insert(rows);
+        }
+      }
+
       setDialogOpen(false);
       resetForm();
       invalidateMenu();
@@ -234,6 +281,14 @@ const MenuManagement = () => {
       stock_qty: item.stock_qty?.toString() || "",
       image_url: item.image_url || "",
     });
+    setServiceFields({
+      is_service: !!item.is_service,
+      service_duration_minutes: (item.service_duration_minutes ?? 60).toString(),
+      slot_capacity: (item.slot_capacity ?? 1).toString(),
+      buffer_minutes: (item.buffer_minutes ?? 0).toString(),
+      advance_booking_days: (item.advance_booking_days ?? 30).toString(),
+    });
+    setAvailability([]);
     setDialogOpen(true);
   };
   const resetForm = () => {
@@ -249,6 +304,11 @@ const MenuManagement = () => {
       stock_qty: "",
       image_url: "",
     });
+    setServiceFields({
+      ...DEFAULT_SERVICE_FIELDS,
+      is_service: isServiceBusiness(businessType),
+    });
+    setAvailability([]);
     setEditingItem(null);
   };
   const filteredItems = useMemo(() => {
