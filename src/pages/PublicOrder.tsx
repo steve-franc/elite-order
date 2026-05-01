@@ -588,7 +588,7 @@ const PublicOrder = () => {
                               </div>
                             )}
                             <div className="absolute bottom-2 right-2 bg-primary text-primary-foreground rounded-full p-1.5 shadow-md opacity-90 group-hover:opacity-100 group-active:scale-90 transition-all">
-                              <Plus className="h-4 w-4" />
+                              {item.is_service ? <Clock className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
                             </div>
                           </div>
                           <div className="p-2.5 space-y-1">
@@ -597,7 +597,11 @@ const PublicOrder = () => {
                               <span className="text-sm font-semibold text-primary">
                                 {formatPrice(item.base_price, item.currency)}
                               </span>
-                              {item.per_unit_price && (
+                              {item.is_service ? (
+                                <span className="text-[10px] text-muted-foreground">
+                                  · {item.service_duration_minutes ?? 60} min
+                                </span>
+                              ) : item.per_unit_price && (
                                 <span className="text-[10px] text-muted-foreground">
                                   +{formatPrice(item.per_unit_price, item.currency)}/{item.pricing_unit}
                                 </span>
