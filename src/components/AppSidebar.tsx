@@ -113,7 +113,7 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {(isManager || isOps) && (
+        {showManagement && (
           <SidebarGroup>
             <SidebarGroupLabel>Management</SidebarGroupLabel>
             <SidebarGroupContent>
