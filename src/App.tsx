@@ -95,7 +95,7 @@ const SuperadminRoute = ({ children }: { children: React.ReactNode }) => {
 
 const PublicOnlyRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading: authLoading } = useAuth();
-  const { isInvestor, loading: roleLoading } = useUserRole();
+  const { isInvestor, isSuperadmin, loading: roleLoading } = useUserRole();
 
   if (authLoading || roleLoading) {
     return (
@@ -106,7 +106,8 @@ const PublicOnlyRoute = ({ children }: { children: React.ReactNode }) => {
   }
 
   if (user) {
-    return <Navigate to={isInvestor ? "/reports" : "/order/create"} replace />;
+    const dest = isSuperadmin ? "/superadmin" : isInvestor ? "/reports" : "/order/create";
+    return <Navigate to={dest} replace />;
   }
 
   return <>{children}</>;
