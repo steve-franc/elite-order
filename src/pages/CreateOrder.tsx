@@ -607,7 +607,7 @@ const CreateOrder = () => {
           {/* Order Summary - Desktop */}
           {!isMobile && (
             <div className="lg:col-span-1">
-              <Card className="sticky top-6 max-h-[calc(100vh-3rem)] flex flex-col">
+              <Card className="sticky top-0 max-h-[calc(100vh-3.5rem-3rem)] flex flex-col">
                 <CardHeader className="shrink-0">
                   <CardTitle className="flex items-center gap-2">
                     <ShoppingCart className="h-5 w-5" />
