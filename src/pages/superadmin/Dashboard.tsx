@@ -44,7 +44,7 @@ export default function SuperDashboard() {
             <>
               <StatCard label="Total Revenue" value={formatPrice(totalRev)} icon={<DollarSign className="h-4 w-4" />} />
               <StatCard label="Total Orders" value={totalOrd.toLocaleString()} icon={<ShoppingCart className="h-4 w-4" />} />
-              <StatCard label="Restaurants" value={String(overview?.restaurants_total ?? 0)} sub={`${overview?.restaurants_active ?? 0} active`} icon={<Store className="h-4 w-4" />} />
+              <StatCard label="Businesses" value={String(overview?.restaurants_total ?? 0)} sub={`${overview?.restaurants_active ?? 0} active`} icon={<Store className="h-4 w-4" />} />
               <StatCard label="Avg Order Value" value={formatPrice(aov)} icon={<TrendingUp className="h-4 w-4" />} />
             </>
           )}
