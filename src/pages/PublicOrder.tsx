@@ -66,6 +66,7 @@ const PublicOrder = () => {
   const [availablePaymentMethods, setAvailablePaymentMethods] = useState<PaymentMethodConfig[]>([]);
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
+  const [bookingItem, setBookingItem] = useState<MenuItem | null>(null);
 
   const toggleCategory = (category: string) => {
     setCollapsedCategories((prev) => {
@@ -142,7 +143,11 @@ const PublicOrder = () => {
   };
 
   const addToOrder = (menuItem: MenuItem) => {
-
+    if (menuItem.is_service) {
+      // Open booking dialog instead of incrementing quantity
+      setBookingItem(menuItem);
+      return;
+    }
     if (isMobile) haptics.tap();
     
     const existing = orderItems.find((item) => item.menuItem.id === menuItem.id);
@@ -155,6 +160,17 @@ const PublicOrder = () => {
     } else {
       setOrderItems([...orderItems, { menuItem, quantity: 1, extraUnits: 0 }]);
     }
+  };
+
+  const handleSlotConfirmed = (slotAt: string) => {
+    if (!bookingItem) return;
+    if (isMobile) haptics.tap();
+    setOrderItems((prev) => [
+      ...prev,
+      { menuItem: bookingItem, quantity: 1, extraUnits: 0, slotAt },
+    ]);
+    setBookingItem(null);
+    toast.success(`${bookingItem.name} booked for ${format(new Date(slotAt), "EEE d MMM, HH:mm")}`);
   };
 
   // Only remove item when both base and per-unit contributions are zero
@@ -249,6 +265,7 @@ const PublicOrder = () => {
         menu_item_id: item.menuItem.id,
         quantity: item.quantity,
         extra_units: item.extraUnits,
+        slot_at: item.slotAt ?? null,
       }));
 
       const customerInfoLines = [
