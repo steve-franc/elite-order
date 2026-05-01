@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { UtensilsCrossed } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { signInSchema, signUpSchema, registerRestaurantSchema, passwordResetSchema, validateInput } from "@/lib/validations";
+import { signInSchema, signUpSchema, registerRestaurantSchema, passwordResetSchema, validateInput, BUSINESS_TYPES } from "@/lib/validations";
 type Restaurant = {
   id: string;
   name: string;
