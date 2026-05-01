@@ -53,12 +53,14 @@ export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { isManager, isInvestor, isOps, isSuperadmin } = useUserRole();
+  const { isSuperadminAccount, godModeDisabled, setGodModeDisabled } = useRestaurantAndRole();
   const { restaurantName, logoUrl } = useRestaurantContext();
 
   // Superadmin items (God Mode)
   const superadminItems = [
     { title: "Dashboard", url: "/superadmin", icon: LayoutDashboard },
     { title: "Restaurants", url: "/superadmin/restaurants", icon: Store },
+    { title: "Users", url: "/superadmin/users", icon: Users },
     { title: "Orders", url: "/superadmin/orders", icon: ShoppingCart },
     { title: "Analytics", url: "/superadmin/analytics", icon: BarChart3 },
     { title: "Products", url: "/superadmin/products", icon: ProductIcon },
