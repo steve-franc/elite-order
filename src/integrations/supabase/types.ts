@@ -545,18 +545,21 @@ export type Database = {
           created_by: string | null
           id: string
           name: string
+          status: string
         }
         Insert: {
           created_at?: string
           created_by?: string | null
           id?: string
           name: string
+          status?: string
         }
         Update: {
           created_at?: string
           created_by?: string | null
           id?: string
           name?: string
+          status?: string
         }
         Relationships: []
       }
@@ -789,7 +792,13 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "server" | "ops" | "counter" | "manager" | "investor"
+      app_role:
+        | "server"
+        | "ops"
+        | "counter"
+        | "manager"
+        | "investor"
+        | "superadmin"
       inventory_status: "available" | "almost_finished" | "finished"
     }
     CompositeTypes: {
@@ -918,7 +927,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["server", "ops", "counter", "manager", "investor"],
+      app_role: [
+        "server",
+        "ops",
+        "counter",
+        "manager",
+        "investor",
+        "superadmin",
+      ],
       inventory_status: ["available", "almost_finished", "finished"],
     },
   },
