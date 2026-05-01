@@ -56,6 +56,9 @@ const MenuManagement = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
+  const [businessType, setBusinessType] = useState<string | null>(null);
+  const [serviceFields, setServiceFields] = useState<ServiceFields>(DEFAULT_SERVICE_FIELDS);
+  const [availability, setAvailability] = useState<AvailabilityWindow[]>([]);
   const [formData, setFormData] = useState({
     name: "",
     category: "",
@@ -69,6 +72,19 @@ const MenuManagement = () => {
     image_url: "",
   });
 
+  // Load business_type once to set defaults
+  useEffect(() => {
+    if (!restaurantId) return;
+    (async () => {
+      const { data } = await supabase
+        .from("restaurants")
+        .select("business_type")
+        .eq("id", restaurantId)
+        .maybeSingle();
+      const bt = (data as any)?.business_type ?? null;
+      setBusinessType(bt);
+    })();
+  }, [restaurantId]);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
