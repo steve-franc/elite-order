@@ -34,7 +34,7 @@ const Layout = ({ children }: LayoutProps) => {
   if (!showSidebar) {
     return (
       <div className="min-h-screen bg-background">
-        <main className="container mx-auto px-4 py-8">
+        <main className="container mx-auto max-w-7xl px-4 py-8 md:px-6">
           {onHoldBanner}
           {children}
         </main>
@@ -46,13 +46,13 @@ const Layout = ({ children }: LayoutProps) => {
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
         <AppSidebar />
-        <div className="flex-1 flex flex-col">
-          <header className="h-14 border-b flex items-center px-4 bg-card">
+        <div className="flex-1 flex flex-col min-w-0">
+          <header className="h-14 border-b/80 flex items-center px-4 bg-card/75 backdrop-blur supports-[backdrop-filter]:bg-card/65 sticky top-0 z-20">
             <SidebarTrigger />
           </header>
-          <main className="flex-1 p-6 overflow-auto">
+          <main className="flex-1 p-4 md:p-6 overflow-auto">
             {onHoldBanner}
-            {children}
+            <div className="mx-auto w-full max-w-7xl">{children}</div>
           </main>
         </div>
       </div>

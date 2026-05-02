@@ -74,9 +74,12 @@ const screenshots = [
 const Landing = () => {
   return (
     <div className="min-h-screen bg-background">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-md focus:bg-card focus:px-3 focus:py-2 focus:shadow-md">
+        Skip to content
+      </a>
       {/* Nav */}
-      <header className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-lg">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
+      <header className="sticky top-0 z-50 border-b bg-card/70 backdrop-blur-xl supports-[backdrop-filter]:bg-card/60">
+        <div className="container mx-auto flex h-16 max-w-7xl items-center justify-between px-4 md:px-6">
           <Link to="/" className="flex items-center gap-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
               <UtensilsCrossed className="h-5 w-5 text-primary-foreground" />
@@ -97,20 +100,21 @@ const Landing = () => {
       </header>
 
       {/* Hero */}
+      <main id="main-content">
       <section className="relative overflow-hidden">
         <div className="pointer-events-none absolute inset-0 -z-10">
           <div className="absolute -top-40 right-0 h-[500px] w-[500px] rounded-full bg-primary/5 blur-3xl" />
           <div className="absolute bottom-0 left-0 h-[400px] w-[400px] rounded-full bg-accent/40 blur-3xl" />
         </div>
 
-        <div className="container mx-auto px-4 py-24 text-center md:py-36">
+        <div className="container mx-auto max-w-7xl px-4 py-20 text-center md:px-6 md:py-32">
           <div className="mx-auto max-w-3xl space-y-6">
             <div className="inline-flex items-center gap-2 rounded-full border bg-card px-4 py-1.5 text-sm font-medium text-muted-foreground">
               <Zap className="h-3.5 w-3.5 text-primary" />
               Built for speed &amp; simplicity
             </div>
 
-            <h1 className="font-serif text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
+            <h1 className="font-serif text-balance text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
               Business operations,{" "}
               <span className="text-primary">simplified</span>
             </h1>
@@ -141,7 +145,7 @@ const Landing = () => {
 
       {/* Screenshots */}
       <section className="border-t bg-card/30 py-20 md:py-28">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto max-w-7xl px-4 md:px-6">
           <div className="mx-auto mb-14 max-w-2xl text-center">
             <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
               See it in action
@@ -157,7 +161,7 @@ const Landing = () => {
                 key={shot.title}
                 className={`flex flex-col items-center gap-6 md:flex-row ${i % 2 !== 0 ? "md:flex-row-reverse" : ""}`}
               >
-                <div className="flex-1 overflow-hidden rounded-xl border shadow-lg">
+                <div className="flex-1 overflow-hidden rounded-2xl border bg-card shadow-lg transition-transform duration-300 hover:-translate-y-1">
                   <img
                     src={shot.src}
                     alt={shot.title}
@@ -179,7 +183,7 @@ const Landing = () => {
 
       {/* Features */}
       <section className="border-t bg-card/50 py-20 md:py-28">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto max-w-7xl px-4 md:px-6">
           <div className="mx-auto mb-14 max-w-2xl text-center">
             <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
               Everything you need to run your business
@@ -193,7 +197,7 @@ const Landing = () => {
             {features.map((feature) => (
               <div
                 key={feature.title}
-                className="group relative rounded-xl border bg-card p-6 transition-all hover:border-primary/30 hover:shadow-lg"
+                className="group relative rounded-2xl border bg-card p-6 transition-all hover:-translate-y-1 hover:border-primary/30 hover:shadow-lg"
               >
                 <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
                   <feature.icon className="h-5 w-5" />
@@ -210,8 +214,8 @@ const Landing = () => {
 
       {/* CTA */}
       <section className="py-20 md:py-28">
-        <div className="container mx-auto px-4">
-          <div className="mx-auto max-w-3xl rounded-2xl border bg-card p-10 text-center shadow-lg md:p-16">
+        <div className="container mx-auto max-w-7xl px-4 md:px-6">
+          <div className="mx-auto max-w-3xl rounded-3xl border bg-card p-10 text-center shadow-lg md:p-16">
             <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
               Ready to streamline your business?
             </h2>
@@ -226,6 +230,7 @@ const Landing = () => {
           </div>
         </div>
       </section>
+      </main>
 
       {/* Footer */}
       <footer className="border-t py-8">
