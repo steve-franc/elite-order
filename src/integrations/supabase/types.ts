@@ -1019,6 +1019,7 @@ export type Database = {
       }
       superadmin_delete_broadcast: { Args: { _id: string }; Returns: undefined }
       superadmin_delete_user: { Args: { _user_id: string }; Returns: undefined }
+      superadmin_get_menu: { Args: { _restaurant_id: string }; Returns: Json }
       superadmin_get_restaurant: {
         Args: { _restaurant_id: string }
         Returns: Json

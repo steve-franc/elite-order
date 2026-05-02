@@ -30,6 +30,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const SuperDashboard = lazy(() => import("./pages/superadmin/Dashboard"));
 const SuperRestaurants = lazy(() => import("./pages/superadmin/Restaurants"));
 const SuperRestaurantDetail = lazy(() => import("./pages/superadmin/RestaurantDetail"));
+const SuperRestaurantMenu = lazy(() => import("./pages/superadmin/RestaurantMenu"));
 const SuperOrders = lazy(() => import("./pages/superadmin/Orders"));
 const SuperAnalytics = lazy(() => import("./pages/superadmin/Analytics"));
 const SuperProducts = lazy(() => import("./pages/superadmin/Products"));
@@ -155,6 +156,7 @@ const App = () => {
               <Route path="/superadmin" element={<SuperadminRoute><SuperDashboard /></SuperadminRoute>} />
               <Route path="/superadmin/restaurants" element={<SuperadminRoute><SuperRestaurants /></SuperadminRoute>} />
               <Route path="/superadmin/restaurants/:id" element={<SuperadminRoute><SuperRestaurantDetail /></SuperadminRoute>} />
+              <Route path="/superadmin/restaurants/:id/menu" element={<SuperadminRoute><SuperRestaurantMenu /></SuperadminRoute>} />
               <Route path="/superadmin/orders" element={<SuperadminRoute><SuperOrders /></SuperadminRoute>} />
               <Route path="/superadmin/analytics" element={<SuperadminRoute><SuperAnalytics /></SuperadminRoute>} />
               <Route path="/superadmin/products" element={<SuperadminRoute><SuperProducts /></SuperadminRoute>} />
