@@ -1,17 +1,18 @@
 import { useState, useMemo } from "react";
 import Layout from "@/components/Layout";
-import { useSuperUsers } from "@/hooks/useSuperadminData";
+import { useSuperUsers, useSuperRestaurants } from "@/hooks/useSuperadminData";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, Search, Crown } from "lucide-react";
+import { Trash2, Search, Crown, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { useRestaurantAndRole } from "@/hooks/useRestaurantAndRole";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 
 const ROLES = ["manager", "ops", "counter", "server", "investor"] as const;
 
@@ -65,9 +66,14 @@ function MembershipRow({ userId, m, onChange }: { userId: string; m: any; onChan
 
 export default function SuperUsers() {
   const { data, isLoading, refetch } = useSuperUsers();
+  const { data: allRestaurants } = useSuperRestaurants();
   const { user } = useRestaurantAndRole();
   const qc = useQueryClient();
   const [q, setQ] = useState("");
+  const [assignTarget, setAssignTarget] = useState<any>(null);
+  const [assignRid, setAssignRid] = useState<string>("");
+  const [assignRole, setAssignRole] = useState<string>("server");
+  const [assignBusy, setAssignBusy] = useState(false);
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
