@@ -178,6 +178,13 @@ export default function SuperUsers() {
                     <Button
                       size="sm"
                       variant="outline"
+                      onClick={() => { setAssignTarget(u); setAssignRid(""); setAssignRole("server"); }}
+                    >
+                      <Plus className="h-3.5 w-3.5 mr-1.5" /> Assign
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
                       className={u.is_superadmin ? "text-amber-600 border-amber-500/40" : ""}
                       onClick={() => toggleSuperadmin(u.user_id, u.is_superadmin, u.full_name)}
                       disabled={u.user_id === user?.id && u.is_superadmin}
@@ -204,6 +211,61 @@ export default function SuperUsers() {
           )}
         </motion.div>
       </div>
+
+      <Dialog open={!!assignTarget} onOpenChange={(o) => { if (!o) setAssignTarget(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign to restaurant</DialogTitle>
+            <DialogDescription>
+              Add <strong>{assignTarget?.full_name || "user"}</strong> to a restaurant with a role. If they're already a member, the role will be updated.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Restaurant</label>
+              <Select value={assignRid} onValueChange={setAssignRid}>
+                <SelectTrigger><SelectValue placeholder="Select a restaurant" /></SelectTrigger>
+                <SelectContent>
+                  {(allRestaurants ?? []).map((r: any) => (
+                    <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Role</label>
+              <Select value={assignRole} onValueChange={setAssignRole}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {ROLES.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setAssignTarget(null)}>Cancel</Button>
+            <Button
+              disabled={!assignRid || assignBusy}
+              onClick={async () => {
+                if (!assignTarget || !assignRid) return;
+                setAssignBusy(true);
+                const { error } = await supabase.rpc("superadmin_change_role", {
+                  _user_id: assignTarget.user_id,
+                  _restaurant_id: assignRid,
+                  _role: assignRole,
+                });
+                setAssignBusy(false);
+                if (error) return toast.error(error.message);
+                toast.success("Assigned to restaurant");
+                setAssignTarget(null);
+                refresh();
+              }}
+            >
+              Assign
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }
